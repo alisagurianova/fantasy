@@ -1,0 +1,3274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Minsky's Quest</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+#game {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── Settings button ── */
+#settings-btn {
+  position: fixed; top: 12px; right: 14px; z-index: 100;
+  width: 36px; height: 36px;
+  background: rgba(10,5,30,0.85);
+  border: 2px solid #5a3aaa;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  color: #c0a0ff;
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+#settings-btn:hover { background: rgba(50,20,100,0.95); border-color: #9060ff; color: #e0c8ff; }
+
+/* ── Modal backdrop ── */
+#settings-modal {
+  display: none;
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.75);
+  align-items: center; justify-content: center;
+}
+#settings-modal.open { display: flex; }
+
+/* ── Modal box ── */
+#settings-box {
+  background: #0a061a;
+  border: 3px solid #5a3aaa;
+  border-radius: 6px;
+  width: min(520px, 92vw);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 0 40px rgba(100,40,220,0.4);
+  font-family: monospace;
+}
+
+/* ── Modal header ── */
+#settings-header {
+  background: linear-gradient(180deg,#1e0f48 0%,#120930 100%);
+  padding: 14px 18px 0;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  border-bottom: 2px solid #2a1560;
+}
+#settings-title {
+  color: #c090ff;
+  font-size: 13px;
+  letter-spacing: 3px;
+  padding-bottom: 12px;
+}
+#settings-close {
+  background: none; border: none; cursor: pointer;
+  color: #6040a0; font-size: 20px; line-height: 1;
+  padding: 0 0 10px 10px;
+  transition: color 0.1s;
+}
+#settings-close:hover { color: #e060ff; }
+
+/* ── Tabs row ── */
+#settings-tabs {
+  display: flex;
+  background: #0a061a;
+  border-bottom: 2px solid #2a1560;
+  padding: 0 16px;
+  gap: 4px;
+}
+.stab {
+  padding: 9px 18px 7px;
+  font-family: monospace; font-size: 11px; letter-spacing: 1px;
+  color: #5040a0; cursor: pointer;
+  border: 2px solid transparent; border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  transition: color 0.1s, background 0.1s;
+  margin-bottom: -2px;
+}
+.stab:hover { color: #a070e0; }
+.stab.active {
+  color: #d0a0ff;
+  background: #160a38;
+  border-color: #5a3aaa;
+  border-bottom-color: #160a38;
+}
+
+/* ── Tab content ── */
+#settings-body {
+  padding: 20px 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Controls tab ── */
+.controls-section { margin-bottom: 20px; }
+.controls-section-title {
+  color: #8050c0; font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 10px;
+  padding-bottom: 4px; border-bottom: 1px solid #2a1560;
+}
+.controls-grid {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+}
+.key-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #1a0f38; border: 1px solid #4a2a90;
+  border-bottom: 3px solid #3a1a70;
+  border-radius: 4px;
+  padding: 3px 8px; min-width: 56px;
+  font-size: 10px; color: #c0a0f8;
+  letter-spacing: 0.5px; text-align: center;
+  white-space: nowrap;
+}
+.key-desc {
+  color: #8878a8; font-size: 10px;
+  display: flex; align-items: center;
+}
+
+/* ── About tab ── */
+.about-text { color: #7868a0; font-size: 10px; line-height: 1.9; }
+.about-text b { color: #c090f0; }
+.about-text .accent { color: #f8d040; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- Settings button -->
+<button id="settings-btn" title="Settings [ESC]">⚙</button>
+
+<!-- Settings modal -->
+<div id="settings-modal">
+  <div id="settings-box">
+    <div id="settings-header">
+      <span id="settings-title">⚙ SETTINGS</span>
+      <button id="settings-close">✕</button>
+    </div>
+    <div id="settings-tabs">
+      <button class="stab active" data-tab="controls">CONTROLS</button>
+      <button class="stab" data-tab="about">ABOUT</button>
+    </div>
+    <div id="settings-body">
+
+      <!-- Controls tab -->
+      <div class="tab-panel active" id="tab-controls">
+        <div class="controls-section">
+          <div class="controls-section-title">Movement</div>
+          <div class="controls-grid">
+            <span class="key-badge">← →</span><span class="key-desc">Walk left / right</span>
+            <span class="key-badge">↑ ↓</span><span class="key-desc">Climb ladder / rope up or down</span>
+          </div>
+        </div>
+        <div class="controls-section">
+          <div class="controls-section-title">Combat</div>
+          <div class="controls-grid">
+            <span class="key-badge">Z</span><span class="key-desc">Swing sword (get it from the blacksmith first)</span>
+          </div>
+        </div>
+        <div class="controls-section">
+          <div class="controls-section-title">Interaction</div>
+          <div class="controls-grid">
+            <span class="key-badge">E</span><span class="key-desc">Talk to NPC / open chest / enter building / respawn</span>
+            <span class="key-badge">P</span><span class="key-desc">Use health potion (restores 2 HP)</span>
+          </div>
+        </div>
+        <div class="controls-section">
+          <div class="controls-section-title">Menus</div>
+          <div class="controls-grid">
+            <span class="key-badge">I</span><span class="key-desc">Open / close inventory</span>
+            <span class="key-badge">ESC</span><span class="key-desc">Close menu / open settings</span>
+            <span class="key-badge">F</span><span class="key-desc">Toggle fullscreen</span>
+          </div>
+        </div>
+        <div class="controls-section">
+          <div class="controls-section-title">Shop (when open)</div>
+          <div class="controls-grid">
+            <span class="key-badge">1</span><span class="key-desc">Buy Health Potion — 5 gold</span>
+            <span class="key-badge">2</span><span class="key-desc">Buy Torch — 3 gold</span>
+            <span class="key-badge">3</span><span class="key-desc">Buy Desert Boots — 8 gold (Oasis Town only)</span>
+            <span class="key-badge">E / ESC</span><span class="key-desc">Close shop</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- About tab -->
+      <div class="tab-panel" id="tab-about">
+        <div class="about-text">
+          <b>Minsky's Quest</b><br><br>
+          A <span class="accent">pixel-art platform adventure</span> across 18 screens
+          and 7 biomes. Inspired by classic Lode Runner.<br><br>
+          <b>Goal</b><br>
+          Collect all <span class="accent">4 ancient seals</span> hidden in chests
+          across the world and return them to the <span class="accent">altar</span>
+          in the Final Chamber.<br><br>
+          <b>Seals to find</b><br>
+          🗺 Ancient Map — Deep Forest<br>
+          🔑 Desert Key — Buried Temple<br>
+          💎 Mountain Gem — Eagle Peak<br>
+          🏛 Temple Seal — Ruins Interior<br><br>
+          <b>Tips</b><br>
+          • Talk to the blacksmith in the first town to get your sword.<br>
+          • Rest at inns to fully restore HP for free.<br>
+          • Enemies drop gold — use it to buy potions at shops.<br>
+          • Desert Boots (Oasis Town shop) slow down enemies.<br>
+          • Gravity applies — only ladders and ropes let you go up.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONSTANTS ──────────────────────────────────────────────────────────────
+const COLS = 20, ROWS = 14, TS = 40;
+const W = COLS * TS, H = ROWS * TS;
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// Resize canvas to fill window, keeping 160:112 pixel-art aspect ratio
+function resizeCanvas() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.imageSmoothingEnabled = false;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Tile IDs
+const T = { AIR:0, GROUND:1, LADDER:2, ROPE:3, CHEST:4, CHEST_OPEN:5, DOOR:6, HAZARD:7, DECO:8, EXIT_R:9, EXIT_L:10, EXIT_UP:11, EXIT_DOWN:12, WALL:13, WATER:14, NPC:15, ALTAR:16 };
+
+// ─── BIOME PALETTES ─────────────────────────────────────────────────────────
+const BIOMES = {
+  grassland: { sky:'#87CEEB', ground:'#5D4037', groundTop:'#388E3C', ladder:'#A0522D', deco:'#2E7D32' },
+  forest:    { sky:'#2E7D32', ground:'#4E342E', groundTop:'#1B5E20', ladder:'#6D4C41', deco:'#1A237E' },
+  desert:    { sky:'#FFF176', ground:'#C19A6B', groundTop:'#D4A017', ladder:'#8D6E63', deco:'#E65100' },
+  mountain:  { sky:'#B0BEC5', ground:'#616161', groundTop:'#757575', ladder:'#5D4037', deco:'#37474F' },
+  darkforest:{ sky:'#1A1A2E', ground:'#3E2723', groundTop:'#4E342E', ladder:'#5D4037', deco:'#0D1B2A' },
+  swamp:     { sky:'#263238', ground:'#2E7D32', groundTop:'#388E3C', ladder:'#558B2F', deco:'#1B5E20' },
+  ruins:     { sky:'#2D1B69', ground:'#37474F', groundTop:'#546E7A', ladder:'#607D8B', deco:'#6A1B9A' },
+  town:      { sky:'#87CEEB', ground:'#5D4037', groundTop:'#388E3C', ladder:'#A0522D', deco:'#1565C0' },
+};
+
+// ─── SCREEN DEFINITIONS ─────────────────────────────────────────────────────
+// Each screen: { name, biome, map[14][20], exits:[{tile,tx,ty,target,sx,sy}], npcs, chests, enemies }
+// Map legend same as T constants but we use numbers directly
+
+function makeMap(rows) { return rows; } // identity, for clarity
+
+const SCREENS = [];
+
+// ── Screen 0: Green Valley Village (Town) ───────────────────────────────────
+SCREENS[0] = {
+  name: 'Green Valley Village', biome: 'town',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,13,13,13,13,0,0,0,0,13,13,13,13,0,0,13,13,13,0],
+    [0,0,13,0,0,13,0,0,0,0,13,0,0,13,0,0,13,0,0,13],
+    [0,0,13,0,0,13,0,0,0,0,13,6,0,13,0,0,13,6,0,13],
+    [1,1,6,1,1,6,1,1,1,1,1,1,1,6,1,1,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [1,1,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,1,1,1],
+    [0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,2,0,2,0,0,0,0,0,0,0,0,2,0,2,0,0,0],
+    [1,1,1,2,1,2,1,1,1,1,1,1,1,1,2,1,2,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:19, ty:5, target:1, sx:1, sy:5 },   // right → Forest Edge
+    { tx:19, ty:6, target:1, sx:1, sy:6 },
+    { tx:0,  ty:5, target:1, sx:18, sy:5 },  // placeholder left loops back
+    { tx:0,  ty:6, target:1, sx:18, sy:6 },
+  ],
+  npcs: [
+    { x:3, y:4, id:'blacksmith', name:'Aldric the Blacksmith', dialogue:['Welcome, traveler!','I can give you a sword.','Take it — you will need it on your journey.'], givesItem:'Iron Sword' },
+    { x:12, y:4, id:'townhall',  name:'Mayor Britta', dialogue:['Four ancient seals were stolen!','Find them: Ancient Map, Desert Key, Mountain Gem, Temple Seal.','Bring them to the Altar in the Final Chamber. Good luck!'] },
+    { x:17, y:4, id:'hotel',     name:'Innkeeper', dialogue:['Welcome to the Green Hearth Inn!','Rest here to restore your health.'], heals:true },
+    { x:7,  y:7, id:'shop',      name:'Merchant', dialogue:['Buy: Health Potion (5g), Torch (3g)'], isShop:true },
+  ],
+  chests: [],
+  enemies: [],
+};
+
+// ── Screen 1: Forest Edge ───────────────────────────────────────────────────
+SCREENS[1] = {
+  name: 'Forest Edge', biome: 'forest',
+  map: makeMap([
+    [8,0,0,0,8,0,0,0,0,8,0,0,0,8,0,0,0,0,8,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,6,1,1,1,2,1,1,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1,1,1,1,1],
+    [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:5, target:0, sx:18, sy:5 },  // left → Town
+    { tx:0, ty:6, target:0, sx:18, sy:6 },
+    { tx:19, ty:6, target:2, sx:1, sy:6 },  // right → Deep Forest
+    { tx:19, ty:11, target:2, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:10, y:11, type:'snake', patrol:[8,14], hp:2 },
+    { x:16, y:5,  type:'monkey', patrol:[15,19], hp:2 },
+  ],
+};
+
+// ── Screen 2: Deep Forest ───────────────────────────────────────────────────
+SCREENS[2] = {
+  name: 'Deep Forest', biome: 'forest',
+  map: makeMap([
+    [8,8,0,0,8,8,0,0,8,8,0,0,8,8,0,0,8,8,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+    [0,0,0,0,2,0,0,1,1,1,1,0,0,0,0,0,2,0,0,0],
+    [1,1,1,1,2,0,0,0,0,0,0,0,0,0,0,0,2,1,1,1],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+    [0,0,0,0,2,0,0,0,0,4,0,0,0,0,0,0,2,0,0,0],
+    [0,0,0,0,2,0,1,1,1,1,1,1,0,0,0,0,2,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+    [1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:6, target:1, sx:18, sy:6 },
+    { tx:0, ty:11, target:1, sx:18, sy:11 },
+    { tx:19, ty:6, target:3, sx:1, sy:6 },
+    { tx:19, ty:11, target:3, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [{ x:9, y:8, id:'ancient_map', item:'Ancient Map', desc:'A map showing the way through the desert to the buried temple.' }],
+  enemies: [
+    { x:7, y:11, type:'snake', patrol:[5,11], hp:2 },
+    { x:13, y:11, type:'snake', patrol:[11,16], hp:2 },
+    { x:2, y:5,  type:'monkey', patrol:[0,4], hp:2 },
+  ],
+};
+
+// ── Screen 3: Forest Ruins ──────────────────────────────────────────────────
+SCREENS[3] = {
+  name: 'Forest Ruins', biome: 'forest',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,13,0,13,0,0,0,0,0,0,0,0,13,0,13,0,0,0,0],
+    [0,0,13,0,13,0,0,0,0,0,0,0,0,13,0,13,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:5, target:2, sx:18, sy:5 },
+    { tx:0, ty:11, target:2, sx:18, sy:11 },
+    { tx:19, ty:5, target:4, sx:1, sy:5 },
+    { tx:19, ty:11, target:4, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:5, y:11, type:'snake', patrol:[3,9], hp:2 },
+    { x:14, y:11, type:'monkey', patrol:[10,18], hp:2 },
+    { x:9, y:7, type:'snake', patrol:[7,12], hp:2 },
+  ],
+};
+
+// ── Screen 4: River Crossing ────────────────────────────────────────────────
+SCREENS[4] = {
+  name: 'River Crossing', biome: 'grassland',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+    [0,0,0,0,0,14,14,14,14,14,14,14,14,14,14,0,0,0,0,0],
+    [0,0,0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:7, target:3, sx:18, sy:7 },
+    { tx:0, ty:11, target:3, sx:18, sy:11 },
+    { tx:19, ty:7, target:5, sx:1, sy:7 },
+    { tx:19, ty:11, target:5, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:9, y:11, type:'snake', patrol:[5,14], hp:2 },
+  ],
+};
+
+// ── Screen 5: Desert Gate ───────────────────────────────────────────────────
+SCREENS[5] = {
+  name: 'Desert Gate', biome: 'desert',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:5, target:4, sx:18, sy:5 },
+    { tx:0, ty:11, target:4, sx:18, sy:11 },
+    { tx:19, ty:5, target:6, sx:1, sy:5 },
+    { tx:19, ty:11, target:6, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:8, y:11, type:'scorpion', patrol:[5,12], hp:3 },
+    { x:15, y:11, type:'lizard', patrol:[12,18], hp:2 },
+  ],
+};
+
+// ── Screen 6: Sandstorm Pass ────────────────────────────────────────────────
+SCREENS[6] = {
+  name: 'Sandstorm Pass', biome: 'desert',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,0,0,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,8,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,8],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:3, target:5, sx:18, sy:3 },
+    { tx:0, ty:11, target:5, sx:18, sy:11 },
+    { tx:19, ty:3, target:7, sx:1, sy:3 },
+    { tx:19, ty:11, target:7, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:5, y:11, type:'scorpion', patrol:[2,10], hp:3 },
+    { x:14, y:11, type:'lizard', patrol:[10,18], hp:2 },
+    { x:9, y:4, type:'scorpion', patrol:[7,13], hp:3 },
+  ],
+};
+
+// ── Screen 7: Oasis Town ────────────────────────────────────────────────────
+SCREENS[7] = {
+  name: 'Oasis Town', biome: 'desert',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,14,14,14,0,0,0,0,0,0,0,0,0],
+    [0,0,13,13,13,13,0,0,14,14,14,0,13,13,13,13,0,0,0,0],
+    [0,0,13,0,0,13,0,0,0,0,0,0,13,0,0,13,0,0,0,0],
+    [0,0,13,0,0,13,0,0,0,0,0,0,13,6,0,13,0,0,0,0],
+    [1,1,6,1,1,6,1,1,1,1,1,1,1,1,1,6,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0],
+    [1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1],
+    [0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0],
+    [0,0,0,0,0,2,0,0,4,0,0,0,0,0,0,2,0,0,0,0],
+    [0,0,0,0,0,2,0,0,1,0,0,0,0,0,0,2,0,0,0,0],
+    [1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:5, target:6, sx:18, sy:5 },
+    { tx:0, ty:11, target:6, sx:18, sy:11 },
+    { tx:19, ty:5, target:8, sx:1, sy:5 },
+    { tx:19, ty:11, target:8, sx:1, sy:11 },
+  ],
+  npcs: [
+    { x:3, y:4, id:'market', name:'Desert Merchant', dialogue:['Buy: Health Potion (5g), Desert Boots (8g)'], isShop:true, sellsBoots:true },
+    { x:14, y:4, id:'oasis_hotel', name:'Oasis Innkeeper', dialogue:['Rest and be refreshed, traveler.'], heals:true },
+    { x:9, y:9, id:'hermit', name:'Old Hermit', dialogue:['The buried temple lies east of here.','Beware the scorpions — they guard the Desert Key.'] },
+  ],
+  chests: [{ x:8, y:10, id:'oasis_hint', item:'Desert Map Fragment', desc:'Marks the entrance to the Buried Temple.' }],
+  enemies: [],
+};
+
+// ── Screen 8: Buried Temple ─────────────────────────────────────────────────
+SCREENS[8] = {
+  name: 'Buried Temple', biome: 'desert',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+    [0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,2,0,0,0,0,0,2,1,1,1,1,1,1,1],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,4,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,1,1,1,1,1,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:2, target:7, sx:18, sy:2 },
+    { tx:0, ty:11, target:7, sx:18, sy:11 },
+    { tx:19, ty:2, target:9, sx:1, sy:2 },
+    { tx:19, ty:11, target:9, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [{ x:8, y:8, id:'desert_key', item:'Desert Key', desc:'An ornate key carved from desert stone.' }],
+  enemies: [
+    { x:3, y:11, type:'scorpion', patrol:[0,6], hp:3 },
+    { x:16, y:11, type:'scorpion', patrol:[13,19], hp:3 },
+    { x:9, y:5, type:'lizard', patrol:[7,12], hp:2 },
+  ],
+};
+
+// ── Screen 9: Rocky Foothills ───────────────────────────────────────────────
+SCREENS[9] = {
+  name: 'Rocky Foothills', biome: 'mountain',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+    [0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,0,0],
+    [0,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,1,1,1,1,1,2,0,0,0,0,2,1,1,1,1,0,0,0],
+    [0,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,8,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,8,0],
+    [0,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,2,1,1,1,1,2,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:2, target:8, sx:18, sy:2 },
+    { tx:0, ty:11, target:8, sx:18, sy:11 },
+    { tx:19, ty:2, target:10, sx:1, sy:2 },
+    { tx:19, ty:11, target:10, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:5, y:11, type:'wolf', patrol:[2,7], hp:4 },
+    { x:15, y:11, type:'wolf', patrol:[12,18], hp:4 },
+    { x:9, y:5, type:'eagle', patrol:[7,12], hp:3 },
+  ],
+};
+
+// ── Screen 10: Mountain Path ────────────────────────────────────────────────
+SCREENS[10] = {
+  name: 'Mountain Path', biome: 'mountain',
+  map: makeMap([
+    [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,1,1,1,1,1,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [1,1,1,1,2,0,0,0,0,0,0,0,0,0,2,1,1,1,1,1],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,1,1,1,0,0,0,1,1,1,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:0, target:9, sx:17, sy:0 },
+    { tx:0, ty:6, target:9, sx:17, sy:6 },
+    { tx:19, ty:0, target:11, sx:1, sy:0 },
+    { tx:19, ty:6, target:11, sx:1, sy:6 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:8, y:4, type:'eagle', patrol:[6,11], hp:3 },
+    { x:2, y:11, type:'wolf', patrol:[0,4], hp:4 },
+    { x:16, y:11, type:'wolf', patrol:[14,19], hp:4 },
+  ],
+};
+
+// ── Screen 11: Eagle Peak ───────────────────────────────────────────────────
+SCREENS[11] = {
+  name: 'Eagle Peak', biome: 'mountain',
+  map: makeMap([
+    [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,4,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,1,1,1,1,1,2,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,2,0,0,0,0,0,2,1,1,1,1,1,1,1],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,2,0,0,0,0,0,2,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:0, target:10, sx:17, sy:0 },
+    { tx:0, ty:6, target:10, sx:17, sy:6 },
+    { tx:19, ty:0, target:12, sx:1, sy:0 },
+    { tx:19, ty:6, target:12, sx:1, sy:6 },
+  ],
+  npcs: [],
+  chests: [{ x:9, y:4, id:'mountain_gem', item:'Mountain Gem', desc:'A glowing blue gem from the peak of the world.' }],
+  enemies: [
+    { x:3, y:11, type:'eagle', patrol:[0,6], hp:3 },
+    { x:16, y:11, type:'wolf', patrol:[13,19], hp:4 },
+    { x:9, y:8, type:'eagle', patrol:[6,13], hp:3 },
+  ],
+};
+
+// ── Screen 12: Mountain Pass ────────────────────────────────────────────────
+SCREENS[12] = {
+  name: 'Mountain Pass', biome: 'mountain',
+  map: makeMap([
+    [1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:0, target:11, sx:17, sy:0 },
+    { tx:0, ty:11, target:11, sx:17, sy:11 },
+    { tx:19, ty:0, target:13, sx:1, sy:0 },
+    { tx:19, ty:11, target:13, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:9, y:11, type:'wolf', patrol:[6,13], hp:4 },
+    { x:3, y:4, type:'eagle', patrol:[0,6], hp:3 },
+    { x:16, y:4, type:'eagle', patrol:[13,19], hp:3 },
+  ],
+};
+
+// ── Screen 13: Dark Forest ──────────────────────────────────────────────────
+SCREENS[13] = {
+  name: 'Dark Forest', biome: 'darkforest',
+  map: makeMap([
+    [8,8,8,0,0,8,8,0,0,0,8,8,0,0,0,8,8,0,8,8],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+    [0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:3, target:12, sx:17, sy:3 },
+    { tx:0, ty:11, target:12, sx:17, sy:11 },
+    { tx:19, ty:3, target:14, sx:1, sy:3 },
+    { tx:19, ty:11, target:14, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:5, y:11, type:'bat', patrol:[2,9], hp:2 },
+    { x:13, y:11, type:'spider', patrol:[10,17], hp:3 },
+    { x:9, y:4, type:'bat', patrol:[6,12], hp:2 },
+    { x:3, y:7, type:'spider', patrol:[1,6], hp:3 },
+  ],
+};
+
+// ── Screen 14: Cursed Swamp ─────────────────────────────────────────────────
+SCREENS[14] = {
+  name: 'Cursed Swamp', biome: 'swamp',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,14,14,14,14,14,14,0,0,0,0,0,0,0],
+    [0,0,0,0,0,3,3,3,3,3,3,3,3,3,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:3, target:13, sx:17, sy:3 },
+    { tx:0, ty:11, target:13, sx:17, sy:11 },
+    { tx:19, ty:3, target:15, sx:1, sy:3 },
+    { tx:19, ty:11, target:15, sx:1, sy:11 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:8, y:11, type:'bat', patrol:[4,12], hp:2 },
+    { x:4, y:4, type:'spider', patrol:[1,8], hp:3 },
+    { x:15, y:4, type:'spider', patrol:[12,18], hp:3 },
+  ],
+};
+
+// ── Screen 15: Ancient Ruins Gate ───────────────────────────────────────────
+SCREENS[15] = {
+  name: 'Ancient Ruins Gate', biome: 'ruins',
+  map: makeMap([
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,13,13,13,13,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,13,0,0,13,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,13,6,0,13,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:3, target:14, sx:17, sy:3 },
+    { tx:0, ty:11, target:14, sx:17, sy:11 },
+    { tx:9, ty:7, target:16, sx:3, sy:6 },   // door → Ruins Interior
+    { tx:10, ty:7, target:16, sx:4, sy:6 },
+    { tx:19, ty:3, target:16, sx:1, sy:3 },
+  ],
+  npcs: [
+    { x:9, y:6, id:'ruins_guard', name:'Ancient Guardian', dialogue:['Only those with the four seals may pass.','Bring: Ancient Map, Desert Key, Mountain Gem, Temple Seal.'] },
+  ],
+  chests: [],
+  enemies: [
+    { x:4, y:11, type:'skeleton', patrol:[1,7], hp:5 },
+    { x:15, y:11, type:'skeleton', patrol:[12,18], hp:5 },
+  ],
+};
+
+// ── Screen 16: Ruins Interior ────────────────────────────────────────────────
+SCREENS[16] = {
+  name: 'Ruins Interior', biome: 'ruins',
+  map: makeMap([
+    [1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,1,1,1,1,1,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [1,1,1,1,2,0,0,0,0,4,0,0,0,0,2,1,1,1,1,1],
+    [0,0,0,0,2,0,1,1,1,1,1,1,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
+    [1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:0, ty:6, target:15, sx:17, sy:6 },
+    { tx:19, ty:6, target:17, sx:1, sy:6 },
+  ],
+  npcs: [],
+  chests: [{ x:9, y:6, id:'temple_seal', item:'Temple Seal', desc:'The final seal — glowing with ancient power.' }],
+  enemies: [
+    { x:3, y:11, type:'skeleton', patrol:[0,4], hp:5 },
+    { x:16, y:11, type:'skeleton', patrol:[14,19], hp:5 },
+    { x:9, y:9, type:'skeleton', patrol:[6,13], hp:5 },
+  ],
+};
+
+// ── Screen 17: Final Chamber ─────────────────────────────────────────────────
+SCREENS[17] = {
+  name: 'Final Chamber', biome: 'ruins',
+  map: makeMap([
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  exits: [
+    { tx:1, ty:6, target:16, sx:17, sy:6 },
+  ],
+  npcs: [],
+  chests: [],
+  enemies: [
+    { x:4, y:11, type:'skeleton', patrol:[1,8], hp:5 },
+    { x:15, y:11, type:'skeleton', patrol:[11,18], hp:5 },
+    { x:9, y:3, type:'skeleton', patrol:[6,13], hp:5 },
+  ],
+  altar: { x:9, y:6 },
+};
+
+// ─── PLAYER STATE ────────────────────────────────────────────────────────────
+const player = {
+  x: 2, y: 10, // tile position (can be fractional during movement)
+  vx: 0, vy: 0,
+  hp: 5, maxHp: 5,
+  gold: 0,
+  inventory: [],
+  questItems: [],
+  hasSword: false,
+  hasBoots: false,
+  potions: 0,
+  torches: 0,
+  attacking: false, attackTimer: 0, attackDir: 1,
+  invincible: false, invincibleTimer: 0,
+  facingRight: true,
+  onGround: false,
+  onLadder: false,
+  onRope: false,
+  currentScreen: 0,
+  spawnX: 2, spawnY: 10,
+};
+
+// ─── ENEMY INSTANCES ─────────────────────────────────────────────────────────
+let enemies = [];
+function initEnemies(screenIdx) {
+  enemies = SCREENS[screenIdx].enemies.map((e,i) => ({
+    ...e, id: i,
+    fx: e.x, fy: e.y,
+    dir: 1,
+    hp: e.hp,
+    maxHp: e.hp,
+    dead: false,
+    moveTimer: 0,
+    stunTimer: 0,
+  }));
+}
+
+// ─── CHEST STATE ─────────────────────────────────────────────────────────────
+const openedChests = new Set();
+const openedNpcs = new Set(); // npcs that gave their item
+
+// ─── GAME STATE ──────────────────────────────────────────────────────────────
+let gameState = 'title'; // 'title' | 'playing' | 'inventory' | 'dialogue' | 'shop' | 'win' | 'dead'
+let dialogueData = null; // { lines, index, npc }
+let shopData = null;
+let popupData = null; // { text, timer }
+let screenTransition = null; // { timer, targetScreen, sx, sy }
+
+// ─── KEYS ────────────────────────────────────────────────────────────────────
+const keys = {};
+const justPressed = {};
+window.addEventListener('keydown', e => {
+  if (!keys[e.code]) justPressed[e.code] = true;
+  keys[e.code] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function getMap() { return SCREENS[player.currentScreen].map; }
+function getTile(tx, ty) {
+  const map = getMap();
+  if (ty < 0 || ty >= ROWS || tx < 0 || tx >= COLS) return T.GROUND;
+  return map[ty][tx];
+}
+function isSolid(tile) { return tile === T.GROUND || tile === T.WALL || tile === T.DECO || tile === T.NPC; }
+function isLadder(tile) { return tile === T.LADDER; }
+function isRope(tile) { return tile === T.ROPE; }
+
+// ─── SCREEN TRANSITION ───────────────────────────────────────────────────────
+function tryExit() {
+  const tx = Math.round(player.x), ty = Math.round(player.y);
+  const screen = SCREENS[player.currentScreen];
+  for (const exit of screen.exits) {
+    if (exit.tx === tx && exit.ty === ty) {
+      startTransition(exit.target, exit.sx, exit.sy);
+      return;
+    }
+    // Also check player walking off left/right edge
+  }
+  // Edge exits
+  if (player.x < 0) {
+    const leftExit = screen.exits.find(e => e.tx === 0);
+    if (leftExit) startTransition(leftExit.target, leftExit.sx, leftExit.sy);
+    else player.x = 0;
+  } else if (player.x >= COLS) {
+    const rightExit = screen.exits.find(e => e.tx === COLS-1);
+    if (rightExit) startTransition(rightExit.target, rightExit.sx, rightExit.sy);
+    else player.x = COLS - 1;
+  }
+}
+
+function startTransition(target, sx, sy) {
+  screenTransition = { timer: 30, targetScreen: target, sx, sy };
+}
+
+function doTransition(target, sx, sy) {
+  player.currentScreen = target;
+  player.x = sx;
+  player.y = sy;
+  player.vx = 0; player.vy = 0;
+  player.spawnX = sx; player.spawnY = sy;
+  initEnemies(target);
+  // Restore opened chests state
+}
+
+// ─── PHYSICS & MOVEMENT ──────────────────────────────────────────────────────
+const GRAVITY = 0.12;
+const MOVE_SPEED = 0.013;
+const LADDER_SPEED = 0.012;
+
+function updatePlayer(dt) {
+  if (gameState !== 'playing') return;
+
+  const map = getMap();
+  const px = player.x, py = player.y;
+  const tileBelow = getTile(Math.round(px), Math.floor(py) + 1);
+  const tileAt    = getTile(Math.round(px), Math.floor(py));
+  const tileAbove = getTile(Math.round(px), Math.floor(py) - 1);
+
+  player.onLadder = isLadder(tileAt) || isLadder(tileBelow);
+  player.onRope   = isRope(tileAt);
+  player.onGround = isSolid(tileBelow) && player.vy >= 0 ||
+                    (isLadder(tileBelow) && player.vy >= 0) ||
+                    player.onLadder;
+
+  // Horizontal movement
+  if (keys['ArrowLeft']) {
+    player.vx = -MOVE_SPEED * dt;
+    player.facingRight = false;
+  } else if (keys['ArrowRight']) {
+    player.vx = MOVE_SPEED * dt;
+    player.facingRight = true;
+  } else {
+    player.vx = 0;
+  }
+
+  // Vertical movement (ladders/ropes)
+  if (player.onLadder || player.onRope) {
+    player.vy = 0;
+    if (keys['ArrowUp']) player.vy = -LADDER_SPEED * dt;
+    if (keys['ArrowDown']) player.vy = LADDER_SPEED * dt;
+  } else {
+    // Gravity
+    player.vy += GRAVITY * dt * 0.06;
+    if (player.vy > 0.5) player.vy = 0.5;
+  }
+
+  // Hang on rope
+  if (player.onRope) {
+    player.vy = 0;
+    if (keys['ArrowLeft']) player.vx = -MOVE_SPEED * dt;
+    if (keys['ArrowRight']) player.vx = MOVE_SPEED * dt;
+  }
+
+  // Apply movement with collision
+  let nx = player.x + player.vx;
+  let ny = player.y + player.vy;
+
+  // Horizontal collision
+  const checkTileH = getTile(player.vx > 0 ? Math.ceil(nx) : Math.floor(nx), Math.round(py));
+  if (isSolid(checkTileH)) {
+    nx = player.x;
+    player.vx = 0;
+  }
+
+  // Vertical collision (falling)
+  if (player.vy > 0) {
+    const belowTile = getTile(Math.round(nx), Math.ceil(ny));
+    if (isSolid(belowTile) || isLadder(belowTile)) {
+      ny = Math.floor(ny);
+      player.vy = 0;
+    }
+    // Hazard
+    if (getTile(Math.round(nx), Math.ceil(ny)) === T.HAZARD || getTile(Math.round(nx), Math.ceil(ny)) === T.WATER) {
+      hurtPlayer(2);
+      respawn();
+      return;
+    }
+  }
+  // Vertical collision (rising)
+  if (player.vy < 0) {
+    const aboveTile = getTile(Math.round(nx), Math.floor(ny));
+    if (isSolid(aboveTile)) {
+      ny = Math.ceil(ny);
+      player.vy = 0;
+    }
+  }
+
+  player.x = nx;
+  player.y = ny;
+
+  // Screen edges
+  if (player.x < -0.5 || player.x > COLS - 0.5) {
+    tryExit();
+    return;
+  }
+  if (player.y > ROWS) {
+    respawn();
+    return;
+  }
+
+  // Exit check on tile
+  for (const exit of SCREENS[player.currentScreen].exits) {
+    if (Math.abs(player.x - exit.tx) < 0.6 && Math.abs(player.y - exit.ty) < 0.6) {
+      startTransition(exit.target, exit.sx, exit.sy);
+      return;
+    }
+  }
+
+  // Attack timer
+  if (player.attacking) {
+    player.attackTimer -= dt;
+    if (player.attackTimer <= 0) player.attacking = false;
+  }
+
+  // Invincibility timer
+  if (player.invincible) {
+    player.invincibleTimer -= dt;
+    if (player.invincibleTimer <= 0) player.invincible = false;
+  }
+}
+
+function respawn() {
+  player.x = player.spawnX;
+  player.y = player.spawnY;
+  player.vy = 0; player.vx = 0;
+  if (player.hp <= 0) {
+    player.hp = player.maxHp;
+    gameState = 'dead';
+  }
+}
+
+function hurtPlayer(dmg) {
+  if (player.invincible) return;
+  player.hp -= dmg;
+  player.invincible = true;
+  player.invincibleTimer = 60;
+  if (player.hp <= 0) { player.hp = 0; gameState = 'dead'; }
+}
+
+// ─── ATTACK ──────────────────────────────────────────────────────────────────
+function playerAttack() {
+  if (!player.hasSword) return;
+  player.attacking = true;
+  player.attackTimer = 15;
+  player.attackDir = player.facingRight ? 1 : -1;
+  // Hit enemies
+  enemies.forEach(e => {
+    if (e.dead) return;
+    const dx = e.fx - player.x, dy = e.fy - player.y;
+    if (Math.abs(dy) < 1 && dx * player.attackDir > 0 && Math.abs(dx) < 1.5) {
+      e.hp--;
+      e.stunTimer = 20;
+      if (e.hp <= 0) {
+        e.dead = true;
+        player.gold += Math.floor(Math.random() * 3) + 1;
+      }
+    }
+  });
+}
+
+// ─── ENEMY AI ────────────────────────────────────────────────────────────────
+function updateEnemies(dt) {
+  enemies.forEach(e => {
+    if (e.dead) return;
+    if (e.stunTimer > 0) { e.stunTimer -= dt; return; }
+    e.moveTimer += dt;
+    const speed = player.hasBoots ? 1.2 : 1.8;
+    if (e.moveTimer < speed) return;
+    e.moveTimer = 0;
+
+    // Patrol
+    e.fx += e.dir * 0.5;
+    if (e.fx <= e.patrol[0] || e.fx >= e.patrol[1]) e.dir *= -1;
+
+    // Gravity-lite (snap to ground)
+    const tileBelow = getTile(Math.round(e.fx), Math.floor(e.fy) + 1);
+    if (!isSolid(tileBelow) && !isLadder(tileBelow)) e.fy += 0.25;
+
+    // Hurt player
+    if (!player.invincible) {
+      const dx = Math.abs(e.fx - player.x), dy = Math.abs(e.fy - player.y);
+      if (dx < 0.8 && dy < 0.8) hurtPlayer(1);
+    }
+  });
+}
+
+// ─── INTERACT ────────────────────────────────────────────────────────────────
+function tryInteract() {
+  const screen = SCREENS[player.currentScreen];
+  const px = Math.round(player.x), py = Math.round(player.y);
+
+  // Chests
+  for (const chest of screen.chests) {
+    const dx = Math.abs(chest.x - player.x), dy = Math.abs(chest.y - player.y);
+    if (dx < 1.2 && dy < 1.2 && !openedChests.has(chest.id)) {
+      openedChests.add(chest.id);
+      // Update map tile
+      screen.map[chest.y][chest.x] = T.CHEST_OPEN;
+      addItem(chest.item);
+      showPopup(`Found: ${chest.item}\n${chest.desc}`);
+      return;
+    }
+  }
+
+  // NPCs
+  for (const npc of screen.npcs) {
+    const dx = Math.abs(npc.x - player.x), dy = Math.abs(npc.y - player.y);
+    if (dx < 1.5 && dy < 1.5) {
+      if (npc.heals) {
+        player.hp = player.maxHp;
+        showPopup('You feel fully rested!\nHP restored.');
+        return;
+      }
+      if (npc.givesItem && !openedNpcs.has(npc.id)) {
+        openedNpcs.add(npc.id);
+        player.hasSword = true;
+        addItem('Iron Sword');
+        gameState = 'dialogue';
+        dialogueData = { lines: [...npc.dialogue, '→ You received: Iron Sword!'], index: 0, npc };
+        return;
+      }
+      if (npc.isShop) {
+        gameState = 'shop';
+        shopData = { npc, sellsBoots: npc.sellsBoots || false };
+        return;
+      }
+      if (npc.dialogue) {
+        gameState = 'dialogue';
+        dialogueData = { lines: npc.dialogue, index: 0, npc };
+        return;
+      }
+    }
+  }
+
+  // Altar (win condition)
+  const s = SCREENS[player.currentScreen];
+  if (s.altar) {
+    const dx = Math.abs(s.altar.x - player.x), dy = Math.abs(s.altar.y - player.y);
+    if (dx < 1.5 && dy < 1.5) {
+      const QUEST = ['Ancient Map','Desert Key','Mountain Gem','Temple Seal'];
+      const hasAll = QUEST.every(q => player.questItems.includes(q));
+      if (hasAll) {
+        gameState = 'win';
+      } else {
+        const missing = QUEST.filter(q => !player.questItems.includes(q));
+        showPopup(`The altar needs:\n${missing.join(', ')}`);
+      }
+    }
+  }
+}
+
+function addItem(name) {
+  const QUEST_ITEMS = ['Ancient Map','Desert Key','Mountain Gem','Temple Seal'];
+  if (QUEST_ITEMS.includes(name)) {
+    if (!player.questItems.includes(name)) player.questItems.push(name);
+  } else if (name === 'Health Potion') {
+    player.potions++;
+  } else if (name === 'Torch') {
+    player.torches++;
+  } else {
+    if (!player.inventory.includes(name)) player.inventory.push(name);
+  }
+}
+
+function showPopup(text) {
+  popupData = { text, timer: 200 };
+}
+
+// ─── FULLSCREEN ──────────────────────────────────────────────────────────────
+function requestFS() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen ||
+     el.msRequestFullscreen || function(){}).call(el);
+  }
+}
+canvas.addEventListener('click', requestFS);
+
+// ─── SETTINGS PANEL ──────────────────────────────────────────────────────────
+const modal   = document.getElementById('settings-modal');
+const closeBtn = document.getElementById('settings-close');
+const settBtn  = document.getElementById('settings-btn');
+let settingsOpen = false;
+
+function openSettings() {
+  settingsOpen = true;
+  modal.classList.add('open');
+}
+function closeSettings() {
+  settingsOpen = false;
+  modal.classList.remove('open');
+}
+
+settBtn.addEventListener('click', e => { e.stopPropagation(); openSettings(); });
+closeBtn.addEventListener('click', closeSettings);
+modal.addEventListener('click', e => { if (e.target === modal) closeSettings(); });
+
+// Tab switching
+document.querySelectorAll('.stab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── INPUT HANDLING ───────────────────────────────────────────────────────────
+function handleInput() {
+  // Title screen — any key starts
+  if (gameState === 'title') {
+    if (Object.keys(justPressed).length > 0) {
+      requestFS();
+      gameState = 'playing';
+    }
+    clearJustPressed();
+    return;
+  }
+
+  // F = fullscreen toggle at any time
+  if (justPressed['KeyF']) requestFS();
+
+  // ESC opens settings when playing
+  if (justPressed['Escape'] && gameState === 'playing') { openSettings(); clearJustPressed(); return; }
+  if (justPressed['Escape'] && settingsOpen) { closeSettings(); clearJustPressed(); return; }
+
+  if (gameState === 'dead') {
+    if (justPressed['Space'] || justPressed['Enter'] || justPressed['KeyZ'] || justPressed['KeyE']) {
+      player.hp = player.maxHp;
+      gameState = 'playing';
+    }
+    clearJustPressed();
+    return;
+  }
+  if (gameState === 'win') { clearJustPressed(); return; }
+
+  if (gameState === 'dialogue') {
+    if (justPressed['KeyE'] || justPressed['Space'] || justPressed['Enter']) {
+      dialogueData.index++;
+      if (dialogueData.index >= dialogueData.lines.length) {
+        gameState = 'playing';
+        dialogueData = null;
+      }
+    }
+    clearJustPressed();
+    return;
+  }
+
+  if (gameState === 'shop') {
+    if (justPressed['Digit1'] || justPressed['Numpad1']) {
+      if (player.gold >= 5) { player.gold -= 5; player.potions++; showPopup('Bought: Health Potion'); }
+      else showPopup('Not enough gold!');
+    }
+    if (justPressed['Digit2'] || justPressed['Numpad2']) {
+      if (player.gold >= 3) { player.gold -= 3; player.torches++; showPopup('Bought: Torch'); }
+      else showPopup('Not enough gold!');
+    }
+    if (shopData && shopData.sellsBoots && (justPressed['Digit3'] || justPressed['Numpad3'])) {
+      if (player.gold >= 8) { player.gold -= 8; player.hasBoots = true; showPopup('Bought: Desert Boots!\nEnemies move slower.'); }
+      else showPopup('Not enough gold!');
+    }
+    if (justPressed['Escape'] || justPressed['KeyE']) { gameState = 'playing'; shopData = null; }
+    clearJustPressed();
+    return;
+  }
+
+  if (gameState === 'inventory') {
+    if (justPressed['KeyI'] || justPressed['Escape']) gameState = 'playing';
+    clearJustPressed();
+    return;
+  }
+
+  // Playing
+  if (justPressed['KeyZ']) { playerAttack(); }
+  if (justPressed['KeyE']) { tryInteract(); }
+  if (justPressed['KeyI']) { gameState = 'inventory'; }
+  if (justPressed['KeyP'] && player.potions > 0 && player.hp < player.maxHp) {
+    player.potions--;
+    player.hp = Math.min(player.maxHp, player.hp + 2);
+    showPopup('Used Health Potion! +2 HP');
+  }
+
+  clearJustPressed();
+}
+
+function clearJustPressed() { Object.keys(justPressed).forEach(k => delete justPressed[k]); }
+
+// ─── PIXEL RENDERING SETUP ───────────────────────────────────────────────────
+let tick = 0;
+
+// 320×224 offscreen canvas (rTS=16), scaled to fill screen
+const osc = document.createElement('canvas');
+osc.width = 320; osc.height = 224;
+const oc = osc.getContext('2d');
+oc.imageSmoothingEnabled = false;
+ctx.imageSmoothingEnabled = false;
+
+const rTS = 16;
+
+function rect(x,y,w,h,c){ if(w>0&&h>0){oc.fillStyle=c;oc.fillRect(~~x,~~y,~~w,~~h);} }
+function spr(cx,cy,rows,pal){
+  cx=~~cx; cy=~~cy;
+  for(let r=0;r<rows.length;r++){
+    for(let c=0;c<rows[r].length;c++){
+      const k=rows[r][c]; if(k==='.'||k===' ')continue;
+      const col=pal[k]; if(col){oc.fillStyle=col;oc.fillRect(cx+c,cy+r,1,1);}
+    }
+  }
+}
+function shadeC(hex,amt){
+  const n=parseInt(hex.replace('#',''),16),cl=v=>Math.min(255,Math.max(0,v+amt));
+  return '#'+[n>>16,(n>>8)&0xff,n&0xff].map(v=>cl(v).toString(16).padStart(2,'0')).join('');
+}
+
+// ─── BIOME PALETTES ──────────────────────────────────────────────────────────
+const BP = {
+  grassland:  {sky:'#3078B8',sky2:'#70C0E8',ground:'#3E8828',soil:'#6B3A1F',wall:'#4A2A10',deco:'#1A6010'},
+  town:       {sky:'#2860A8',sky2:'#60A8D8',ground:'#3E8828',soil:'#6B3A1F',wall:'#7A5A38',deco:'#4A3018'},
+  forest:     {sky:'#0A2808',sky2:'#185018',ground:'#1E6018',soil:'#3E2010',wall:'#2A1808',deco:'#0A2A08'},
+  desert:     {sky:'#C87808',sky2:'#F0C040',ground:'#C09030',soil:'#A07830',wall:'#807050',deco:'#287828'},
+  mountain:   {sky:'#3A5870',sky2:'#7898B0',ground:'#586870',soil:'#383840',wall:'#303048',deco:'#202840'},
+  darkforest: {sky:'#060410',sky2:'#100820',ground:'#183818',soil:'#201008',wall:'#100808',deco:'#082808'},
+  swamp:      {sky:'#080F08',sky2:'#102010',ground:'#286820',soil:'#183018',wall:'#102010',deco:'#104808'},
+  ruins:      {sky:'#100628',sky2:'#280E50',ground:'#485868',soil:'#303840',wall:'#283040',deco:'#500878'},
+};
+
+// ─── BACKGROUNDS ─────────────────────────────────────────────────────────────
+function drawBackground(biome){
+  const p=BP[biome]||BP.grassland;
+  // Smooth 8-band gradient sky
+  const skyH=~~(224*0.58);
+  for(let i=0;i<8;i++){
+    const t=i/8,t2=(i+1)/8;
+    const y0=~~(t*skyH),y1=~~(t2*skyH);
+    const lerp=(a,b,t3)=>Math.round(a+(b-a)*t3);
+    const c1=parseInt(p.sky.replace('#',''),16),c2=parseInt(p.sky2.replace('#',''),16);
+    const r=lerp(c1>>16,c2>>16,t),g2=lerp((c1>>8)&0xff,(c2>>8)&0xff,t),b=lerp(c1&0xff,c2&0xff,t);
+    rect(0,y0,320,y1-y0+1,`#${r.toString(16).padStart(2,'0')}${g2.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`);
+  }
+  rect(0,skyH,320,224-skyH,p.sky2);
+
+  if(biome==='grassland'||biome==='town') { bgClouds(); bgSun(); }
+  if(biome==='forest')   { bgForest(p); bgMoon('#C8D8B8',100,20); }
+  if(biome==='darkforest'||biome==='swamp'||biome==='ruins') bgStars();
+  if(biome==='desert')   bgDesert(p);
+  if(biome==='mountain') { bgMountains(p); bgMoon('#E8F0F8',260,18); }
+  if(biome==='ruins')    bgRuins(p);
+  if(biome==='swamp')    bgSwamp(p);
+  if(biome==='darkforest') bgMoon('#F0B040',40,22);
+}
+
+function bgClouds(){
+  const ofs=(tick>>1)%400;
+  [[30,22,60,18,'#F0F8FF','#D8EEFF'],[160,14,80,22,'#FFFFFF','#EAF4FF'],[290,28,55,16,'#F0F8FF','#D8EEFF'],
+   [480,18,70,20,'#FFFFFF','#EAF4FF'],[-100,32,50,15,'#F0F8FF','#D8EEFF']].forEach(([cx,cy,cw,ch,c1,c2])=>{
+    const x=(cx-ofs+400)%500-50;
+    rect(x+4,cy,cw-8,ch,c1);
+    rect(x+2,cy-4,cw-4,ch,c1);
+    rect(x,cy-2,cw,ch-4,c1);
+    rect(x+cw*0.3|0,cy-8,cw*0.4|0,ch,c2);
+    // Underside shadow
+    rect(x+2,cy+ch-4,cw-4,4,shadeC(c1,-20));
+  });
+}
+
+function bgForest(p){
+  // Three layers of tree silhouettes
+  const layers=[{c:'#0A1A08',scale:1.0,ofs:0},{c:'#081408',scale:0.8,ofs:40},{c:'#060C06',scale:0.6,ofs:80}];
+  layers.forEach(({c,scale,ofs})=>{
+    const treeW=~~(30*scale),treeH=~~(55*scale);
+    for(let tx=ofs%treeW-treeW;tx<320;tx+=~~(treeW*0.75)){
+      const h=~~(treeH*(0.85+Math.sin(tx*0.15)*0.15));
+      rect(tx+treeW*0.4|0,224-h*0.4|0,~~(treeW*0.2),~~(h*0.4),c); // trunk
+      rect(tx+treeW*0.1|0,224-h,~~(treeW*0.8),h,c);                // body
+      rect(tx+treeW*0.2|0,224-h-8,~~(treeW*0.6),10,c);             // top
+    }
+  });
+}
+
+function bgStars(){
+  const starList=[[12,8,3],[28,3,1],[50,15,2],[75,6,1],[100,12,2],[130,4,3],[155,9,1],[185,2,2],[210,14,1],[240,7,3],[268,11,1],[295,5,2],[310,16,1],[22,18,2],[88,22,1],[145,18,2],[200,5,3],[255,20,1]];
+  starList.forEach(([sx,sy,sz])=>{
+    const tw=(tick>>2)+sx;
+    const bright=(tw%9===0)?'#FFFFFF':((tw%6===0)?'#E8ECFF':'#9098A8');
+    rect(sx*2,sy*2,sz,sz,bright);
+    if(tw%9===0){
+      rect(sx*2-1,sy*2+~~(sz/2),1,1,'#C8D0FF');
+      rect(sx*2+sz,sy*2+~~(sz/2),1,1,'#C8D0FF');
+      rect(sx*2+~~(sz/2),sy*2-1,1,1,'#C8D0FF');
+      rect(sx*2+~~(sz/2),sy*2+sz,1,1,'#C8D0FF');
+    }
+  });
+  // Shooting star
+  if((tick>>4)%80<12){
+    const st=(tick>>4)%80;
+    const sx2=20+st*18,sy2=10+st*3;
+    rect(sx2,sy2,4,1,'#FFFFFF'); rect(sx2-4,sy2,3,1,'#A0B0D0'); rect(sx2-8,sy2,2,1,'#606880');
+  }
+}
+
+function bgDesert(p){
+  // Sun with rays
+  const sunX=260,sunY=24;
+  rect(sunX-12,sunY-2,24,4,'#FFF8A0');rect(sunX-2,sunY-12,4,24,'#FFF8A0');
+  rect(sunX-9,sunY-9,4,4,'#FFF8A0');rect(sunX+5,sunY-9,4,4,'#FFF8A0');
+  rect(sunX-9,sunY+5,4,4,'#FFF8A0');rect(sunX+5,sunY+5,4,4,'#FFF8A0');
+  // Sun disc
+  for(let r=0;r<16;r++)for(let c=0;c<16;c++){
+    const dx=c-7.5,dy=r-7.5;
+    if(dx*dx+dy*dy<64){rect(sunX-8+c,sunY-8+r,1,1,r<8?'#FFFFF0':'#FFF880');}
+  }
+  // Dune layers
+  [['#8B6218',224*0.75|0,1.0],['#A07428',224*0.68|0,0.7],['#B88838',224*0.62|0,0.5]].forEach(([c,baseY,amp])=>{
+    for(let x=0;x<320;x++){
+      const h=~~(18*amp*Math.sin(x*0.025+amp)*Math.cos(x*0.018));
+      rect(x,baseY+h,1,224-(baseY+h),c);
+    }
+  });
+}
+
+function bgMountains(p){
+  // Three mountain ranges, back to front
+  [['#202830',0.55,0.6],['#2A3840',0.65,0.8],['#354858',0.72,1.0]].forEach(([c,yFrac,amp],li)=>{
+    const baseY=~~(224*yFrac);
+    for(let x=0;x<320;x++){
+      const h=~~(70*amp*(Math.sin(x*0.04+li)*0.5+Math.sin(x*0.07+li*2)*0.3+Math.sin(x*0.015+li)*0.2));
+      const py=baseY-Math.max(0,h);
+      rect(x,py,1,224-py,c);
+      // Snow caps
+      if(h>40){rect(x,py,1,~~(h*0.2),shadeC(c,50));}
+    }
+  });
+}
+
+function bgRuins(p){
+  bgStars();
+  // Nebula glow
+  for(let r=0;r<224;r+=2)for(let c=0;c<320;c+=2){
+    const dx=c-160,dy=r-80;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<120){
+      const alpha=~~((1-dist/120)*18);
+      rect(c,r,2,2,`rgba(120,40,200,${alpha/255})`);
+    }
+  }
+  // Ruined arches
+  [[30,100],[130,90],[230,108],[290,95]].forEach(([ax,ay])=>{
+    rect(ax,ay,8,50,shadeC(p.wall,10));
+    rect(ax+22,ay+10,8,40,shadeC(p.wall,10));
+    rect(ax+2,ay-2,6,6,shadeC(p.wall,10));
+    rect(ax+22,ay-2,6,6,shadeC(p.wall,10));
+    for(let i=ax+8;i<ax+22;i++){
+      const arch=~~(6*(Math.sin((i-ax-8)/14*Math.PI)));
+      rect(i,ay-arch,2,4,shadeC(p.wall,10));
+    }
+  });
+}
+
+function bgSwamp(p){
+  bgStars();
+  // Fog wisps
+  const wt=(tick>>3)%320;
+  [[0,180,120,16,'rgba(20,60,20,0.3)'],[80,195,100,12,'rgba(10,50,10,0.25)'],[200,188,140,10,'rgba(15,55,15,0.2)']].forEach(([wx,wy,ww,wh,wc])=>{
+    const x=(wx+wt)%360-40;
+    oc.fillStyle=wc; oc.fillRect(x,wy,ww,wh);
+  });
+}
+
+function bgSun(){
+  const sx=48,sy=22;
+  // Animated rays
+  const ra=(tick>>3)*0.12;
+  [[0,22],[45,20],[90,22],[135,20],[180,22],[225,20],[270,22],[315,20]].forEach(([ang,len],i)=>{
+    const rad=ang*Math.PI/180+ra;
+    const x1=sx+Math.cos(rad)*14,y1=sy+Math.sin(rad)*14;
+    const x2=sx+Math.cos(rad)*(14+len),y2=sy+Math.sin(rad)*(14+len);
+    oc.strokeStyle=(i%2===0)?'#FFE860':'#FFD040'; oc.lineWidth=2;
+    oc.beginPath(); oc.moveTo(x1,y1); oc.lineTo(x2,y2); oc.stroke();
+  });
+  // Glow halo
+  for(let gr=18;gr>0;gr--){
+    oc.globalAlpha=0.04;
+    oc.fillStyle='#FFF8A0';
+    oc.beginPath(); oc.arc(sx,sy,gr+10,0,Math.PI*2); oc.fill();
+  }
+  oc.globalAlpha=1;
+  // Disc
+  for(let r=0;r<14;r++) for(let c=0;c<14;c++){
+    const dx=c-6.5,dy=r-6.5;
+    if(dx*dx+dy*dy<45){rect(sx-7+c,sy-7+r,1,1,dy<0?'#FFFFF0':'#FFF870');}
+  }
+}
+function bgMoon(col,mx,my){
+  // Crescent moon
+  for(let r=0;r<14;r++) for(let c=0;c<14;c++){
+    const dx=c-7,dy=r-7;
+    if(dx*dx+dy*dy<48){
+      const dx2=c-10,dy2=r-6;
+      if(dx2*dx2+dy2*dy2>=30){rect(mx-7+c,my-7+r,1,1,col);}
+    }
+  }
+  // Moon glow
+  for(let gr=5;gr>0;gr--){
+    oc.globalAlpha=0.05;
+    oc.fillStyle=col;
+    oc.beginPath(); oc.arc(mx,my,gr+8,0,Math.PI*2); oc.fill();
+  }
+  oc.globalAlpha=1;
+  // Stars near moon
+  [[mx+18,my-6],[mx-14,my+10],[mx+8,my+16]].forEach(([sx,sy])=>{
+    rect(sx,sy,2,2,'#FFFFFF'); rect(sx,sy,1,1,'#FFFFF8');
+  });
+}
+
+// ─── TILE DRAWING ─────────────────────────────────────────────────────────────
+function drawTile(tile,tx,ty,biome){
+  const p=BP[biome]||BP.grassland;
+  const x=tx*rTS,y=ty*rTS;
+  switch(tile){
+    case T.GROUND: case T.WALL: drawGround(x,y,biome,p,tile===T.GROUND); break;
+    case T.LADDER:  drawLadder(x,y,p); break;
+    case T.ROPE:    drawRope(x,y,p); break;
+    case T.CHEST:   drawChest(x,y,false); break;
+    case T.CHEST_OPEN: drawChest(x,y,true); break;
+    case T.DOOR:    drawDoor(x,y,biome,p); break;
+    case T.WATER:   drawWater(x,y); break;
+    case T.HAZARD:  drawHazard(x,y); break;
+    case T.DECO:    drawDeco(x,y,biome,p); break;
+    case T.ALTAR:   drawAltar(x,y); break;
+  }
+}
+
+function drawGround(x,y,biome,p,hasSurface){
+  const soil=p.soil, dark=shadeC(soil,-22), light=shadeC(soil,16), mid=shadeC(soil,-8);
+
+  if(biome==='mountain'||biome==='ruins'){
+    // Stone brick pattern
+    const stoneBase=p.soil, stoneLight=shadeC(stoneBase,20), stoneDark=shadeC(stoneBase,-25);
+    rect(x,y,16,16,stoneBase);
+    // Brick rows (offset every other row)
+    const brickH=5;
+    for(let row=0;row<3;row++){
+      const oy=y+row*brickH, off=(row%2)*8;
+      // Mortar lines
+      rect(x,oy,16,1,stoneDark);
+      // Brick faces
+      for(let bx=off-8;bx<16;bx+=8){
+        const bw=Math.min(bx+7,16)-Math.max(bx,0);
+        const bxc=Math.max(bx,0);
+        if(bw>0){
+          rect(x+bxc,oy+1,bw,brickH-2,shadeC(stoneBase,row%2?5:-5));
+          rect(x+bxc,oy+1,1,brickH-2,stoneLight);
+          rect(x+bxc,oy+1,bw,1,stoneLight);
+          if(bxc+bw<16) rect(x+bxc+bw,oy,1,brickH,stoneDark);
+        }
+      }
+    }
+    // Mossy patches
+    rect(x+1,y+8,3,2,'#405038'); rect(x+11,y+12,2,2,'#384530');
+    rect(x+6,y+4,2,1,'#485840');
+    // Right and bottom shadow
+    rect(x+15,y,1,16,stoneDark); rect(x,y+15,16,1,stoneDark);
+  } else if(biome==='desert'){
+    // Layered sandy soil with pebbles
+    rect(x,y,16,16,soil);
+    rect(x,y+4,16,1,light); rect(x,y+9,16,1,light); rect(x,y+13,16,1,mid);
+    // Sand ripple texture
+    for(let si=0;si<16;si+=3){
+      rect(x+si,y+2,2,1,light); rect(x+(si+5)%14,y+7,2,1,light);
+    }
+    // Pebbles
+    rect(x+2,y+5,2,2,dark); rect(x+7,y+10,2,2,dark);
+    rect(x+12,y+6,2,2,dark); rect(x+4,y+13,3,2,dark);
+    rect(x+10,y+3,2,2,light);
+    rect(x+15,y,1,16,dark); rect(x,y+15,16,1,dark);
+  } else {
+    // Earth/soil with roots and layers
+    rect(x,y,16,16,soil);
+    // Stratified layers
+    rect(x,y+4,16,1,light); rect(x,y+8,16,1,mid); rect(x,y+12,16,1,dark);
+    // Root threads
+    rect(x+3,y+1,1,5,dark); rect(x+3,y+5,2,1,dark);
+    rect(x+9,y+3,1,4,dark); rect(x+8,y+6,2,1,dark);
+    rect(x+13,y+2,1,6,mid);
+    // Soil variation chunks
+    rect(x+1,y+6,3,3,dark); rect(x+6,y+9,4,2,dark);
+    rect(x+11,y+7,3,4,light); rect(x+5,y+13,5,2,dark);
+    // Small stones
+    rect(x+2,y+10,2,2,shadeC(soil,-30)); rect(x+11,y+5,2,2,shadeC(soil,-30));
+    rect(x+7,y+13,2,2,shadeC(soil,-30));
+    rect(x+15,y,1,16,dark); rect(x,y+15,16,1,dark);
+  }
+
+  if(!hasSurface) return;
+
+  const g=p.ground, gl=shadeC(g,40), gd=shadeC(g,-18), gm=shadeC(g,-5);
+  if(biome==='grassland'||biome==='town'){
+    // Rich grass surface — 4px deep with micro-texture
+    rect(x,y,16,1,gl);
+    rect(x,y+1,16,1,g);
+    rect(x,y+2,16,1,gm);
+    rect(x,y+3,16,1,gd);
+    // Varied grass blade heights (every 2px)
+    for(let bx=1;bx<15;bx+=2){
+      const h=2+((bx*7+x)%3);
+      const bc=((bx+x)%4===0)?shadeC(g,30):((bx+x)%3===0)?shadeC(g,-10):g;
+      rect(x+bx,y-h,1,h,bc);
+    }
+    // Occasional flower dots
+    if((x>>4)%5===1){rect(x+3,y-4,2,2,'#F8D040');rect(x+3,y-4,1,1,'#FFF880');}
+    if((x>>4)%7===2){rect(x+10,y-3,2,2,'#F04080');rect(x+10,y-3,1,1,'#F890B0');}
+    // Top highlight variation
+    rect(x+2,y,3,1,gl); rect(x+8,y,2,1,gl); rect(x+13,y,2,1,gl);
+  } else if(biome==='forest'){
+    rect(x,y,16,1,gl); rect(x,y+1,16,1,g); rect(x,y+2,16,1,gm); rect(x,y+3,16,1,gd);
+    for(let bx=1;bx<15;bx+=2){
+      const h=2+((bx*5+x)%4);
+      rect(x+bx,y-h,1,h,((bx+x)%3===0)?shadeC(g,-15):shadeC(g,10));
+    }
+    // Mushrooms occasionally
+    if((x>>4)%6===0){
+      rect(x+5,y-5,4,2,'#C83010'); rect(x+4,y-4,6,1,'#E04020');
+      rect(x+6,y-3,2,3,'#D0B890'); rect(x+6,y-3,1,3,'#E8C8A0');
+      rect(x+5,y-4,1,1,'#FFFFFF'); rect(x+8,y-5,1,1,'#FFFFFF');
+    }
+  } else if(biome==='swamp'){
+    rect(x,y,16,1,gl); rect(x,y+1,16,1,g); rect(x,y+2,16,1,gm); rect(x,y+3,16,1,gd);
+    for(let bx=1;bx<15;bx+=3){
+      rect(x+bx,y-2,1,2,shadeC(g,-20)); rect(x+bx+1,y-1,1,1,g);
+    }
+    // Puddle of murky water
+    if((x>>4)%4===0){ rect(x+3,y,10,1,'#2A5030'); rect(x+4,y,8,1,'#3A6840'); }
+  } else if(biome==='desert'){
+    rect(x,y,16,1,shadeC(g,45)); rect(x,y+1,16,1,g); rect(x,y+2,16,1,gd);
+    // Wind ripples on surface
+    rect(x+1,y,4,1,shadeC(g,30)); rect(x+7,y,3,1,shadeC(g,30)); rect(x+12,y,3,1,shadeC(g,30));
+    // Scattered pebbles on surface
+    rect(x+3,y+1,2,1,shadeC(g,-25)); rect(x+10,y+2,2,1,shadeC(g,-25));
+  } else if(biome==='mountain'||biome==='ruins'){
+    // Snow/frost cap on stone
+    rect(x,y,16,1,'#E8F0F8'); rect(x,y+1,16,1,'#D0DCE8'); rect(x,y+2,16,1,shadeC(g,30));
+    // Snow clumps
+    rect(x+1,y,3,2,'#F0F8FF'); rect(x+7,y,4,1,'#F0F8FF'); rect(x+12,y,3,2,'#F0F8FF');
+    rect(x+4,y-1,3,2,'#FFFFFF'); rect(x+9,y-1,4,2,'#FFFFFF');
+  } else if(biome==='darkforest'){
+    rect(x,y,16,1,gl); rect(x,y+1,16,1,shadeC(g,-10)); rect(x,y+2,16,1,gd);
+    // Dead grass / dark undergrowth
+    for(let bx=1;bx<15;bx+=3){ rect(x+bx,y-2,1,2,shadeC(g,-30)); }
+    // Glowing fungal spots
+    if((x>>4)%3===0){ rect(x+6,y-2,3,2,'#40A010'); rect(x+7,y-2,1,1,'#80FF20'); }
+  }
+}
+
+function drawLadder(x,y,p){
+  const lc=shadeC(p.soil,20), ld=shadeC(p.soil,-15), lh=shadeC(p.soil,45), lm=shadeC(p.soil,5);
+  // Background — slightly lighter than wall
+  rect(x,y,16,16,shadeC(p.soil,-8));
+  // Wall texture behind ladder
+  rect(x,y+3,16,1,shadeC(p.soil,-12)); rect(x,y+10,16,1,shadeC(p.soil,-12));
+  // Left rail — rounded post with bevel
+  rect(x+2,y,4,16,lm);
+  rect(x+2,y,1,16,lh);  // left highlight
+  rect(x+5,y,1,16,ld);  // right shadow
+  rect(x+3,y,2,16,lc);  // body
+  // Right rail
+  rect(x+10,y,4,16,lm);
+  rect(x+10,y,1,16,lh);
+  rect(x+13,y,1,16,ld);
+  rect(x+11,y,2,16,lc);
+  // Rungs with rounded ends (every 4px)
+  for(let ry=1;ry<16;ry+=4){
+    // Rung body
+    rect(x+3,y+ry,10,3,lc);
+    // Top bevel (highlight)
+    rect(x+3,y+ry,10,1,lh);
+    // Bottom bevel (shadow)
+    rect(x+3,y+ry+2,10,1,ld);
+    // End caps
+    rect(x+2,y+ry,1,3,ld); rect(x+13,y+ry,1,3,ld);
+  }
+  // Worn spots on rungs (usage texture)
+  rect(x+6,y+2,4,1,shadeC(lc,15)); rect(x+6,y+6,4,1,shadeC(lc,15));
+  rect(x+6,y+10,4,1,shadeC(lc,15)); rect(x+6,y+14,4,1,shadeC(lc,15));
+}
+
+function drawRope(x,y,p){
+  const rc='#9B7040', rh='#C8A060', rd='#6A4828', rm='#B08848';
+  // Transparent background (sky shows through)
+  const sc=SCREENS[player.currentScreen];
+  drawBackground && rect(x,y,16,16,BP[sc.biome]?.sky2||'#3078B8');
+  // Rope shadow
+  rect(x,y+8,16,3,'rgba(0,0,0,0.2)');
+  // Main rope — three interlaced strands
+  for(let i=0;i<16;i++){
+    const phase=i%4;
+    if(phase===0){rect(x+i,y+5,1,5,rh); rect(x+i,y+6,1,3,rc);}
+    else if(phase===1){rect(x+i,y+6,1,5,rc); rect(x+i,y+7,1,2,rd);}
+    else if(phase===2){rect(x+i,y+5,1,5,rm); rect(x+i,y+5,1,2,rh);}
+    else{rect(x+i,y+6,1,4,rd); rect(x+i,y+9,1,2,rm);}
+  }
+  // Rope top/bottom surface
+  rect(x,y+5,16,1,rh);
+  rect(x,y+10,16,1,rd);
+  // Knots at edges — thicker wound section
+  rect(x,y+4,4,8,rm); rect(x,y+4,1,8,rh); rect(x+3,y+4,1,8,rd);
+  rect(x+12,y+4,4,8,rm); rect(x+12,y+4,1,8,rh); rect(x+15,y+4,1,8,rd);
+  // Frayed fiber details on knots
+  rect(x+1,y+4,2,1,rh); rect(x+1,y+12,2,1,rd);
+  rect(x+13,y+4,2,1,rh); rect(x+13,y+12,2,1,rd);
+}
+
+function drawChest(x,y,open){
+  if(!open){
+    // Glow
+    const glow=(tick>>2)%2?'#F8C000':'#E0A800';
+    rect(x-1,y-1,18,18,glow+'44'); // faint border glow using manual blend
+    // Shadow
+    rect(x+2,y+14,14,4,'#00000040');
+    // Body
+    spr(x,y,[
+      '................',
+      '.DDDDDDDDDDDDDD.',
+      '.DbbbbbbbbbbbbD.',
+      '.Db..........bD.',
+      '.Db..........bD.',
+      '.Db..........bD.',
+      '.DDDDDDDDDDDDDD.',
+      '................',
+    ],{D:'#9B6010',b:'#7B4808','.':null});
+    // Lid
+    spr(x,y,[
+      '.GGGGGGGGGGGGGG.',
+      'GLLLLLLLLLLLLLLG',
+      'GL............LG',
+      'GL............LG',
+      'GLLLLLLLLLLLLLLG',
+      '.GGGGGGGGGGGGGG.',
+    ],{G:'#C89020',L:'#F0B828','.':null});
+    // Strap across middle
+    rect(x+1,y+5,14,2,'#C89020');
+    rect(x+1,y+5,14,1,'#F0D040');
+    // Lock
+    rect(x+6,y+4,4,5,'#F0C000');
+    rect(x+7,y+2,2,3,'#E0A800');
+    rect(x+7,y+5,2,2,'#806000');
+    // Lock shine
+    rect(x+6,y+4,1,1,'#FFEC60');
+    // Rivets corners
+    rect(x+1,y+1,2,2,'#C89020'); rect(x+13,y+1,2,2,'#C89020');
+    rect(x+1,y+11,2,2,'#C89020'); rect(x+13,y+11,2,2,'#C89020');
+    // Animated shimmer on top
+    const sh=(tick>>3)%14;
+    rect(x+1+sh,y+1,2,1,'#FFEC60');
+  } else {
+    // Opened chest
+    rect(x+2,y+14,14,4,'#00000040');
+    rect(x+1,y+5,14,11,'#4A2804');
+    rect(x+1,y+5,14,1,'#7B4808');
+    // Open lid propped up
+    spr(x,y,[
+      '.GGGGGGGGGGGGGG.',
+      'GLLLLLLLLLLLLLLG',
+      'GL............LG',
+      'GLLLLLLLLLLLLLLG',
+    ],{G:'#C89020',L:'#F0B828','.':null});
+    // Sparkles inside
+    const sp=(tick>>1)%6;
+    const sparkColors=['#F8F040','#F0C000','#FFD060','#FFEC80','#FFFFC0','#F8D040'];
+    [[4,8],[8,6],[11,9],[6,11],[10,7]].forEach(([sx,sy],i)=>{
+      rect(x+sx,y+sy,2,2,sparkColors[(i+sp)%sparkColors.length]);
+    });
+  }
+}
+
+function drawDoor(x,y,biome,p){
+  const dc=biome==='desert'?'#9B7030':biome==='ruins'?'#405060':'#7B4F1E';
+  const dh=shadeC(dc,30), dd=shadeC(dc,-20);
+  const fc=biome==='desert'?'#B89040':biome==='ruins'?'#607080':p.wall||'#4A3010';
+  // Frame
+  rect(x,y,16,16,fc);
+  rect(x+1,y,14,16,dc);
+  // Arch cutout top
+  for(let ax=0;ax<14;ax++){
+    const ah=~~(6*Math.sin(ax/13*Math.PI));
+    rect(x+1+ax,y,1,ah,fc);
+  }
+  // Door surface planks
+  for(let ply=7;ply<16;ply+=4){
+    rect(x+2,y+ply,12,1,dd);
+    rect(x+2,y+ply+1,12,2,shadeC(dc,8));
+    rect(x+2,y+ply+1,12,1,dh);
+  }
+  // Vertical center split
+  rect(x+8,y+6,1,10,dd);
+  // Hinges
+  rect(x+2,y+7,3,3,'#808080'); rect(x+2,y+7,3,1,'#A0A0A0');
+  rect(x+2,y+12,3,3,'#808080'); rect(x+2,y+12,3,1,'#A0A0A0');
+  // Doorknob
+  rect(x+10,y+9,3,3,'#F8D040'); rect(x+10,y+9,2,1,'#FFEC80');
+}
+
+function drawWater(x,y){
+  const t=(tick>>2)%16;
+  // Deep water gradient
+  rect(x,y,16,16,'#0530880');
+  for(let wy=0;wy<16;wy++){
+    const depth=wy/16;
+    const r=~~(4+depth*12), g=~~(40+depth*20), b=~~(140-depth*40);
+    rect(x,y+wy,16,1,`rgb(${r},${g},${b})`);
+  }
+  // Surface foam/bubbles
+  for(let wx=0;wx<16;wx++){
+    const w1=Math.sin((wx+t)*0.7+x*0.1)*2;
+    const w2=Math.sin((wx+t*1.3+4)*0.9+x*0.15)*1.5;
+    // First wave crest
+    rect(x+wx,y+3+~~w1,1,3,'#2888D8');
+    rect(x+wx,y+2+~~w1,1,2,'#60B8F0');
+    rect(x+wx,y+2+~~w1,1,1,'#A8DCF8');
+    // Second wave
+    rect(x+wx,y+8+~~w2,1,2,'#1870B8');
+    rect(x+wx,y+7+~~w2,1,1,'#4898D0');
+  }
+  // Foam highlights
+  const sh=(tick>>2)%14;
+  rect(x+sh,y+2,4,1,'#C0E8FF'); rect(x+sh+1,y+2,2,1,'#FFFFFF');
+  rect(x+(sh+8)%14,y+7,3,1,'#90C8E8');
+  // Bubbles rising
+  const b1=(tick>>3)%10, b2=(tick>>4)%12;
+  rect(x+b1,y+14-b1,2,2,'#3880C0'); rect(x+b1,y+14-b1,1,1,'#70B0E0');
+  rect(x+b2+4,y+12-b2,1,1,'#5090C8');
+  // Caustic light patches on bottom
+  rect(x+2,y+13,3,2,'#0C50A0'); rect(x+9,y+14,4,1,'#0C50A0');
+}
+
+function drawHazard(x,y){
+  const ft=tick>>1;
+  // Lava/ember base — layered dark rock with glow
+  rect(x,y,16,16,'#2A0400');
+  rect(x,y+10,16,6,'#4A0800');
+  rect(x,y+12,16,4,'#6A1000');
+  // Rock cracks with lava glow seeping through
+  [[1,10,2,5],[5,8,1,7],[9,11,2,4],[13,9,1,6]].forEach(([cx,cy,cw,ch])=>{
+    rect(x+cx,y+cy,cw,ch,'#FF3000');
+    rect(x+cx,y+cy,cw,1,'#FF8800');
+  });
+  // Flame columns — 5 tongues with flicker
+  [[1,9],[4,11],[7,8],[10,12],[13,10]].forEach(([fx,fbase],i)=>{
+    const flick=fbase+((ft+i*3)%4)-1;
+    const fx2=x+fx;
+    // Outer flame (dark orange)
+    rect(fx2,y+16-flick,3,flick,'#C83000');
+    // Mid flame (orange)
+    rect(fx2,y+16-~~(flick*0.75),3,~~(flick*0.75),'#FF5500');
+    // Inner flame (yellow-orange)
+    rect(fx2+1,y+16-~~(flick*0.5),1,~~(flick*0.5),'#FF9900');
+    // Tip (bright yellow)
+    rect(fx2+1,y+16-~~(flick*0.85),1,2,'#FFE000');
+  });
+  // Heat shimmer glow at base
+  rect(x,y+13,16,3,'#FF4400');
+  rect(x,y+14,16,2,'#FF7700');
+  rect(x,y+15,16,1,'#FFAA00');
+  // Floating embers
+  const e1=(ft>>1)%14, e2=(ft>>2)%12;
+  if(ft%6<3){ rect(x+e1,y+8-ft%5,2,2,'#FF8800'); rect(x+e1,y+8-ft%5,1,1,'#FFEE00'); }
+  if(ft%8<4){ rect(x+e2+2,y+6-ft%4,1,1,'#FF6600'); }
+}
+
+function drawDeco(x,y,biome,p){
+  if(biome==='forest'||biome==='darkforest'||biome==='swamp'){
+    const dk=biome==='darkforest', sw=biome==='swamp';
+    const tc=dk?'#0C2A0A':sw?'#1C4212':'#267020';
+    const tm=dk?'#103010':sw?'#226418':'#308A28';
+    const th=dk?'#1A4010':sw?'#2E7A20':'#44B038';
+    const trunk=dk?'#2E1208':sw?'#3E2410':'#523010';
+    const trunkH=shadeC(trunk,25), trunkD=shadeC(trunk,-15);
+    // Roots spreading at base
+    rect(x+3,y+14,2,2,trunkD); rect(x+11,y+14,2,2,trunkD);
+    rect(x+2,y+15,3,1,trunkD); rect(x+11,y+15,3,1,trunkD);
+    // Trunk with bark texture
+    rect(x+6,y+7,4,9,trunk);
+    rect(x+6,y+7,1,9,trunkH); // left highlight
+    rect(x+9,y+7,1,9,trunkD); // right shadow
+    // Bark lines
+    rect(x+7,y+8,1,3,trunkD); rect(x+8,y+11,1,4,trunkD);
+    rect(x+7,y+13,2,1,trunkH);
+    // Canopy — layered for depth (back to front)
+    rect(x+2,y+5,12,5,shadeC(tc,-8)); // back layer
+    rect(x+3,y+4,10,3,tc);
+    rect(x+1,y+6,14,4,tm); // mid layer wider
+    rect(x+0,y+7,16,3,tm);
+    rect(x+3,y+2,10,4,tm); // upper
+    rect(x+4,y+1,8,3,tc);
+    rect(x+5,y+0,6,2,shadeC(tc,8)); // top bright
+    // Canopy highlights (light hitting top-left)
+    rect(x+3,y+5,5,1,th); rect(x+3,y+6,3,1,th);
+    rect(x+8,y+2,4,1,th); rect(x+5,y+1,3,1,th);
+    rect(x+1,y+7,3,1,th);
+    // Canopy shadow (bottom-right)
+    rect(x+11,y+8,4,2,shadeC(tc,-20)); rect(x+9,y+9,5,2,shadeC(tc,-15));
+    // Biome-specific extras
+    if(dk){
+      // Glowing mushrooms at base
+      rect(x+1,y+14,3,2,'#204010'); rect(x+2,y+12,2,3,'#C0A060');
+      rect(x+1,y+12,4,1,'#C83818'); rect(x+1,y+12,1,1,'#F85828');
+      // Eerie purple berries in canopy
+      rect(x+5,y+7,2,2,'#6020A0'); rect(x+10,y+6,2,2,'#5010A0');
+      rect(x+5,y+7,1,1,'#9040D0'); rect(x+10,y+6,1,1,'#8030C0');
+    }
+    if(sw){
+      // Hanging vines
+      rect(x+4,y+10,1,6,'#2A5020'); rect(x+11,y+9,1,7,'#2A5020');
+      rect(x+4,y+15,2,1,'#3A6828'); rect(x+11,y+15,2,1,'#3A6828');
+      // Swamp gas bubble
+      if((tick>>4)%3===0){ rect(x+7,y+11,2,2,'#70A830'); rect(x+7,y+11,1,1,'#A0D840'); }
+    }
+  } else if(biome==='desert'){
+    // Detailed cactus with ribs
+    const cg='#287828', cl='#3AAA3A', cd='#1C5A1C', ch='#50C050';
+    // Main trunk
+    rect(x+5,y+1,6,15,cg);
+    rect(x+6,y+1,1,15,cl); // rib highlight 1
+    rect(x+8,y+1,1,15,shadeC(cg,-5)); // rib shadow
+    rect(x+10,y+1,1,15,cd); // edge shadow
+    rect(x+5,y+1,1,15,cd); // left edge
+    // Rib bumps
+    for(let ri=0;ri<14;ri+=3){ rect(x+6,y+1+ri,1,2,ch); }
+    // Left arm with elbow
+    rect(x+1,y+4,5,4,cg); rect(x+2,y+4,3,1,cl); // horizontal
+    rect(x+1,y+2,4,4,cg); rect(x+2,y+2,2,1,cl); // vertical section
+    rect(x+1,y+2,1,6,cd); // shadow
+    // Right arm
+    rect(x+10,y+6,5,4,cg); rect(x+10,y+6,4,1,cl);
+    rect(x+11,y+4,4,4,cg); rect(x+11,y+4,3,1,cl);
+    rect(x+14,y+4,1,6,cd);
+    // Spines (sharp short lines)
+    [[4,3],[4,7],[4,11],[11,2],[11,8],[11,12],[6,0],[9,0]].forEach(([sx,sy])=>{
+      rect(x+sx,y+sy,1,2,shadeC(cg,-30));
+      rect(x+sx,y+sy,1,1,'#D0D080'); // spine tip highlight
+    });
+    // Flower crown at top
+    [[5,0,'#F84060'],[7,-1,'#FF6080'],[9,0,'#F84060'],[6,-1,'#FF8090'],[8,-1,'#FF8090']].forEach(([px2,py2,pc])=>{
+      rect(x+px2,y+py2,2,2,pc); rect(x+px2,y+py2,1,1,shadeC(pc,30));
+    });
+    rect(x+7,y-1,2,2,'#F8C000'); // center stamen
+  } else if(biome==='mountain'){
+    // Detailed boulder with cracks and lichen
+    const rc='#4A4A5A', rh=shadeC(rc,35), rd=shadeC(rc,-25), rm=shadeC(rc,12);
+    // Boulder main shape (irregular polygon via rects)
+    rect(x+3,y+4,10,12,rc);
+    rect(x+1,y+7,14,8,rc);
+    rect(x+2,y+5,12,10,rc);
+    rect(x+4,y+3,8,12,rc);
+    // Top face — lit from above-left
+    rect(x+4,y+3,8,4,rm);
+    rect(x+3,y+5,10,2,shadeC(rc,18));
+    rect(x+4,y+3,8,1,rh);
+    rect(x+4,y+3,1,4,rh); // left edge highlight
+    rect(x+3,y+5,1,6,rh);
+    // Bottom and right shadow
+    rect(x+13,y+5,2,9,rd); rect(x+12,y+6,2,8,shadeC(rd,5));
+    rect(x+2,y+14,12,2,rd);
+    // Major crack
+    rect(x+7,y+4,1,10,rd); rect(x+8,y+8,1,6,shadeC(rd,-5));
+    rect(x+7,y+9,2,1,shadeC(rd,-5));
+    // Minor cracks
+    rect(x+4,y+7,3,1,shadeC(rc,-15)); rect(x+10,y+10,3,1,shadeC(rc,-15));
+    rect(x+5,y+12,4,1,shadeC(rc,-15));
+    // Lichen patches (muted green/yellow)
+    rect(x+4,y+6,4,3,'#526858'); rect(x+3,y+8,2,2,'#445A48');
+    rect(x+10,y+11,3,2,'#4A6050'); rect(x+8,y+5,2,2,'#5A6840');
+    // Tiny crystal vein
+    rect(x+9,y+7,1,3,'#9090C0'); rect(x+9,y+7,1,1,'#C0C0E0');
+  } else if(biome==='ruins'){
+    // Ornate broken column with carved details
+    const rc=p.wall||'#384858', rh=shadeC(rc,30), rd=shadeC(rc,-28), rm=shadeC(rc,10);
+    // Base plinth
+    rect(x+3,y+14,10,2,shadeC(rc,-10));
+    rect(x+2,y+14,12,1,rc);
+    // Column shaft
+    rect(x+4,y+2,8,13,rc);
+    rect(x+4,y+2,1,13,rh);  // left highlight
+    rect(x+11,y+2,1,13,rd); // right shadow
+    // Fluting (vertical carved grooves)
+    rect(x+6,y+2,1,13,shadeC(rc,-12));
+    rect(x+8,y+2,1,13,shadeC(rc,-12));
+    rect(x+10,y+2,1,13,shadeC(rc,-12));
+    // Capital (top decoration) — partially broken
+    rect(x+3,y+0,10,3,rm);
+    rect(x+3,y+0,10,1,rh);
+    rect(x+3,y+0,1,3,rh);
+    // Chipped chunk missing top-right
+    rect(x+10,y+0,3,4,'rgba(0,0,0,0)'); // visual gap
+    rect(x+10,y+1,3,3,shadeC(p.sky2||'#100628',-10)||'#06020E');
+    // Carved rune bands
+    rect(x+5,y+5,6,1,shadeC(rc,-18));
+    rect(x+5,y+5,1,1,rh); rect(x+7,y+5,1,1,rh); rect(x+9,y+5,1,1,rh);
+    rect(x+5,y+9,6,1,shadeC(rc,-18));
+    // Vine growing up shaft
+    rect(x+12,y+4,1,10,'#284818'); rect(x+12,y+6,2,1,'#304820'); rect(x+11,y+9,2,1,'#304820');
+    rect(x+13,y+7,1,1,'#406028'); rect(x+13,y+12,1,1,'#406028');
+  }
+}
+
+function drawAltar(x,y){
+  const t=tick*0.07;
+  const pulseR=~~(148+40*Math.sin(t)),pulseG=~~(40+20*Math.sin(t+1)),pulseB=~~(220+35*Math.sin(t+2));
+  const glowC=`rgb(${pulseR},${pulseG},${pulseB})`;
+  // Glow aura (manual alpha)
+  const auraSize=~~(4+3*Math.abs(Math.sin(t)));
+  for(let ar=0;ar<auraSize;ar++){
+    oc.globalAlpha=0.12*(1-ar/auraSize);
+    oc.fillStyle=glowC;
+    oc.fillRect(x-ar,y-ar,16+ar*2,16+ar*2);
+  }
+  oc.globalAlpha=1;
+  // Stone base
+  rect(x,y+8,16,8,'#402060');
+  rect(x+1,y+7,14,2,'#502878');
+  rect(x+2,y+6,12,2,'#603090');
+  // Runes on base
+  rect(x+3,y+9,2,4,'#8040C0'); rect(x+7,y+9,2,4,'#8040C0'); rect(x+11,y+9,2,4,'#8040C0');
+  rect(x+2,y+12,12,1,'#9050D0');
+  // Crystal pillar
+  const cx2=x+6,cy2=y;
+  spr(cx2,cy2,[
+    '..cc..',
+    '.cCCc.',
+    'cCWWCc',
+    'cCWWCc',
+    '.cCCc.',
+    '.cCCc.',
+    '..cc..',
+    '..cc..',
+  ],{c:glowC,C:shadeC(glowC,30),W:'#F8F0FF','.':null});
+  // Sparkle particles
+  const sp=(tick>>2)%4;
+  [[x+2,y+4],[x+12,y+3],[x+1,y+10],[x+14,y+11]].forEach(([sx,sy],i)=>{
+    if((i+sp)%4<2){rect(sx,sy,2,2,'#F8E0FF'); rect(sx,sy,1,1,'#FFFFFF');}
+  });
+}
+
+// ─── NPC SPRITES ─────────────────────────────────────────────────────────────
+const NPC_DEFS = {
+  blacksmith: {
+    hat:'#202020', hatH:'#404040', coat:'#484848', coatH:'#606060',
+    skin:'#D09058', skinH:'#E0A870', belt:'#806030', boots:'#302018'
+  },
+  townhall: {
+    hat:'#102080', hatH:'#2040A0', coat:'#183098', coatH:'#2848C0',
+    skin:'#D09058', skinH:'#E0A870', belt:'#804020', boots:'#281808'
+  },
+  hotel: {
+    hat:'#501808', hatH:'#703020', coat:'#805030', coatH:'#A06840',
+    skin:'#E0A870', skinH:'#F0C090', belt:'#604020', boots:'#381808'
+  },
+  shop: {
+    hat:'#104010', hatH:'#206020', coat:'#186018', coatH:'#288028',
+    skin:'#D09058', skinH:'#E0A870', belt:'#806030', boots:'#302010'
+  },
+  market: {
+    hat:'#802000', hatH:'#A03010', coat:'#C04010', coatH:'#E06020',
+    skin:'#B07848', skinH:'#C88858', belt:'#604010', boots:'#381808'
+  },
+  oasis_hotel: {
+    hat:'#003838', hatH:'#005858', coat:'#005848', coatH:'#008060',
+    skin:'#C08858', skinH:'#D09868', belt:'#405030', boots:'#201808'
+  },
+  hermit: {
+    hat:'#380870', hatH:'#5010A0', coat:'#300868', coatH:'#500898',
+    skin:'#B8A080', skinH:'#C8B090', belt:'#402060', boots:'#201030'
+  },
+  ruins_guard: {
+    hat:'#283040', hatH:'#384858', coat:'#303848', coatH:'#485868',
+    skin:'#9098A0', skinH:'#A8B0B8', belt:'#203040', boots:'#181828'
+  },
+};
+
+function drawNPC(npc){
+  const d=NPC_DEFS[npc.id]||NPC_DEFS.shop;
+  const x=~~(npc.x*rTS),y=~~(npc.y*rTS)-10;
+  const bob=Math.sin(tick*0.08+npc.x)*1.5;
+  const by=y+~~bob;
+
+  // Shadow ellipse
+  oc.fillStyle='rgba(0,0,0,0.3)';
+  oc.beginPath(); oc.ellipse(x+8,y+28,8,3,0,0,Math.PI*2); oc.fill();
+
+  // Hat brim
+  rect(x+1,by+4,14,2,d.hat);
+  rect(x+1,by+4,14,1,d.hatH);
+  // Hat top
+  rect(x+3,by,10,5,d.hat);
+  rect(x+3,by,10,1,d.hatH);
+  rect(x+3,by,1,5,d.hatH);
+
+  // Head
+  rect(x+3,by+5,10,9,d.skin);
+  rect(x+3,by+5,1,9,d.skinH); // highlight
+  // Eyes
+  rect(x+5,by+8,2,2,'#201010'); rect(x+9,by+8,2,2,'#201010');
+  rect(x+5,by+8,1,1,'#FFFFFF'); rect(x+9,by+8,1,1,'#FFFFFF');
+  // Nose
+  rect(x+8,by+10,1,1,shadeC(d.skin,-20));
+  // Mouth
+  rect(x+5,by+12,5,1,shadeC(d.skin,-25));
+  rect(x+6,by+13,3,1,shadeC(d.skin,-15));
+  // Ear
+  rect(x+2,by+7,2,4,d.skin); rect(x+12,by+7,2,4,d.skin);
+
+  // Collar
+  rect(x+5,by+13,6,2,shadeC(d.coat,20));
+
+  // Body/coat
+  rect(x+2,by+14,12,12,d.coat);
+  rect(x+2,by+14,1,12,d.coatH);
+  rect(x+2,by+14,12,1,d.coatH);
+  // Coat lapels
+  rect(x+5,by+14,3,6,shadeC(d.coat,15)); rect(x+8,by+14,3,6,shadeC(d.coat,15));
+
+  // Belt
+  rect(x+2,by+22,12,2,d.belt);
+  rect(x+7,by+22,2,2,shadeC(d.belt,30)); // buckle
+
+  // Arms
+  rect(x+1,by+15,2,9,d.coat); rect(x+13,by+15,2,9,d.coat);
+  // Hands
+  rect(x+1,by+23,2,2,d.skin); rect(x+13,by+23,2,2,d.skin);
+
+  // Legs
+  rect(x+3,by+25,4,3,shadeC(d.coat,-15)); rect(x+9,by+25,4,3,shadeC(d.coat,-15));
+  // Boots
+  rect(x+2,by+27,5,2,d.boots); rect(x+8,by+27,5,2,d.boots); // toes extend 1px
+  rect(x+2,by+27,5,1,shadeC(d.boots,20));
+
+  // Name tag
+  const nm=npc.name.split(' ').slice(0,2).join(' ').toUpperCase().slice(0,10);
+  const nw=pixelTextWidth(nm,1)+4;
+  rect(x+8-~~(nw/2)-1,by-8,nw+2,8,'rgba(0,0,0,0.7)');
+  rect(x+8-~~(nw/2)-1,by-8,nw+2,1,'#8060C0');
+  drawPixelText(nm,x+8-~~(nw/2),by-7,'#F8D040',1);
+}
+
+// ─── PIXEL FONT ───────────────────────────────────────────────────────────────
+const PFONT={
+  A:['010','101','111','101','101'], B:['110','101','110','101','110'],
+  C:['011','100','100','100','011'], D:['110','101','101','101','110'],
+  E:['111','100','110','100','111'], F:['111','100','110','100','100'],
+  G:['011','100','101','101','011'], H:['101','101','111','101','101'],
+  I:['111','010','010','010','111'], J:['001','001','001','101','010'],
+  K:['101','101','110','101','101'], L:['100','100','100','100','111'],
+  M:['101','111','111','101','101'], N:['101','111','111','111','101'],
+  O:['010','101','101','101','010'], P:['110','101','110','100','100'],
+  Q:['010','101','101','111','001'], R:['110','101','110','101','101'],
+  S:['011','100','010','001','110'], T:['111','010','010','010','010'],
+  U:['101','101','101','101','010'], V:['101','101','101','010','010'],
+  W:['101','101','111','111','101'], X:['101','101','010','101','101'],
+  Y:['101','101','010','010','010'], Z:['111','001','010','100','111'],
+  '0':['010','101','101','101','010'], '1':['010','110','010','010','111'],
+  '2':['110','001','010','100','111'], '3':['110','001','010','001','110'],
+  '4':['101','101','111','001','001'], '5':['111','100','110','001','110'],
+  '6':['011','100','110','101','010'], '7':['111','001','010','010','010'],
+  '8':['010','101','010','101','010'], '9':['010','101','011','001','110'],
+  ':':['000','010','000','010','000'], '!':['010','010','010','000','010'],
+  '?':['110','001','010','000','010'], '-':['000','000','111','000','000'],
+  '.':['000','000','000','000','010'], '+':['000','010','111','010','000'],
+  ' ':['000','000','000','000','000'], '/':['001','001','010','100','100'],
+  "'":['010','010','000','000','000'], '♥':['000','101','111','010','000'],
+  '♡':['000','101','010','010','000'], '★':['010','111','010','101','101'],
+  '►':['100','110','111','110','100'], '✔':['001','001','010','110','100'],
+  '○':['010','101','101','101','010'],
+};
+function drawPixelText(text,x,y,color,scale=1){
+  let cx=~~x;
+  for(const ch of text.toUpperCase()){
+    const g=PFONT[ch]||PFONT[' '];
+    for(let r=0;r<g.length;r++) for(let c=0;c<g[r].length;c++)
+      if(g[r][c]==='1'){rect(cx+c*scale,~~y+r*scale,scale,scale,color);}
+    cx+=(g[0].length+1)*scale;
+  }
+}
+function pixelTextWidth(text,scale=1){
+  let w=0;
+  for(const ch of text.toUpperCase()){const g=PFONT[ch]||PFONT[' ']; w+=(g[0].length+1)*scale;}
+  return w;
+}
+
+// ─── PLAYER SPRITE (Wizard) ───────────────────────────────────────────────────
+// ─── PLAYER SPRITE (Cloaked Figure) ──────────────────────────────────────────
+const PLAYER_PAL={
+  C:'#1A1220',c:'#2A1C30',  // cloak dark/mid
+  D:'#0E0C16',d:'#150F1C',  // cloak deep shadow
+  L:'#382840',l:'#4A3858',  // cloak lighter fold
+  G:'#241C2C',              // cloak mid-shadow
+  e:'#FF3030',E:'#FF6060',  // glowing eyes in darkness
+  '.':null
+};
+
+// Idle — fully cloaked, deep hood, no face visible
+const PLAYER_ROWS=[
+  '....lLLl....',  //  0  hood peak
+  '...lLLLLl...',  //  1
+  '..lLLLLLLl..',  //  2  hood wide
+  '.dDDDDDDDDd.',  //  3  hood brim / face in shadow
+  '.dDDDeeDDd..',  //  4  two glowing eyes in darkness
+  '.dDDDDDDDd..',  //  5  deep shadow — face hidden
+  '.dDDDDDDDd..',  //  6
+  '..dDDDDDDd..',  //  7  lower hood
+  '..CCCcCCCC..',  //  8  cloak shoulders
+  '.CCCcccCCC..',  //  9
+  '.CCCcGcCCC..',  // 10  cloak body
+  '.CCCCcCCCC..',  // 11
+  '..CCCcCCCC..',  // 12
+  '..CCcccCC...',  // 13  cloak mid fold
+  '..CCCcCCC...',  // 14
+  '..CCCcCCC...',  // 15
+  '..CCCcCCC...',  // 16  cloak lower
+  '...CCcCC....',  // 17
+  '...CCcCC....',  // 18  cloak hem — no feet visible
+  '...dDdDd....',  // 19  shadow at ground
+];
+
+// Walk — cloak sways, only hem shifts
+const PLAYER_WALK=[
+  '....lLLl....',
+  '...lLLLLl...',
+  '..lLLLLLLl..',
+  '.dDDDDDDDDd.',
+  '.dDDDeeDDd..',
+  '.dDDDDDDDd..',
+  '.dDDDDDDDd..',
+  '..dDDDDDDd..',
+  '..CCCcCCCC..',
+  '.CCCcccCCC..',
+  '.CCCcGcCCC..',
+  '.CCCCcCCCC..',
+  '..CCCcCCCC..',
+  '..CCcccCC...',
+  '..CCCcCCC...',
+  '..CCCcCCC...',
+  '..CCCcCCC...',
+  '....CCcCC...',  // hem swings forward
+  '....CCcCC...',
+  '....dDdD....',
+];
+
+function drawPlayer(){
+  if(player.invincible&&((tick>>2)&1)) return;
+  const px2=~~(player.x*rTS),py2=~~(player.y*rTS)-7;
+  const walking=player.onGround&&Math.abs(player.vx)>0.001;
+  const fwd=player.facingRight;
+  const sway=walking?~~(3*Math.sin(tick*0.22)):0;
+
+  // Cloak hem sways — shift bottom rows sideways when walking
+  const frame=PLAYER_ROWS.map((row,i)=>{
+    if(i>=16 && walking && sway!==0){
+      return sway>0 ? '.'+row.slice(0,-1) : row.slice(1)+'.';
+    }
+    return row;
+  });
+
+  // Faint shadow on ground
+  oc.fillStyle='rgba(0,0,0,0.22)';
+  oc.beginPath(); oc.ellipse(px2+6,py2+20,6,2,0,0,Math.PI*2); oc.fill();
+
+  // Sprite — fully cloaked, mirrored for left-facing
+  if(fwd){
+    spr(px2,py2,frame,PLAYER_PAL);
+  } else {
+    for(let r=0;r<frame.length;r++){
+      const row=frame[r];
+      for(let c=0;c<row.length;c++){
+        const k=row[c]; if(k==='.'||!k) continue;
+        const col=PLAYER_PAL[k]; if(!col) continue;
+        oc.fillStyle=col; oc.fillRect(px2+(row.length-1-c),py2+r,1,1);
+      }
+    }
+  }
+
+  // Eye glow pulse inside hood
+  const glow=0.3+0.2*Math.abs(Math.sin(tick*0.06));
+  oc.globalAlpha=glow;
+  oc.fillStyle='#FF2020';
+  oc.fillRect(px2+4,py2+4,2,2);
+  oc.fillRect(px2+7,py2+4,2,2);
+  oc.globalAlpha=1;
+
+  // Attack — dark energy slash from under cloak
+  if(player.hasSword && player.attacking){
+    const dir=fwd?1:-1;
+    const sx=px2+(fwd?10:-2), sy=py2+10;
+    // Dark scythe-like slash
+    oc.globalAlpha=0.8;
+    oc.strokeStyle='#8020C0'; oc.lineWidth=3;
+    oc.beginPath();
+    oc.arc(px2+6,sy,fwd?13:13,fwd?-0.9:-2.3,fwd?0.5:-1.1);
+    oc.stroke();
+    oc.strokeStyle='#C060FF'; oc.lineWidth=1;
+    oc.beginPath();
+    oc.arc(px2+6,sy,fwd?11:11,fwd?-0.9:-2.3,fwd?0.5:-1.1);
+    oc.stroke();
+    oc.globalAlpha=1;
+    if(player.attackTimer>8){
+      rect(sx,sy-2,4,4,'#9030D0');
+      rect(sx+1,sy-1,2,2,'#F0A0FF');
+    }
+  }
+}
+
+// ─── ENEMY SPRITES ────────────────────────────────────────────────────────────
+function drawEnemies(){
+  enemies.forEach(e=>{
+    if(e.dead) return;
+    const px2=~~(e.fx*rTS),py2=~~(e.fy*rTS)-8;
+    if(e.stunTimer>0&&((tick>>2)&1)){oc.globalAlpha=0.3;}
+    // Shadow
+    oc.fillStyle='rgba(0,0,0,0.25)';
+    oc.beginPath(); oc.ellipse(px2+8,py2+24,8,3,0,0,Math.PI*2); oc.fill();
+    switch(e.type){
+      case 'snake':    drawEnemy_snake(px2,py2,e.dir); break;
+      case 'monkey':   drawEnemy_monkey(px2,py2,e.dir); break;
+      case 'scorpion': drawEnemy_scorpion(px2,py2,e.dir); break;
+      case 'lizard':   drawEnemy_lizard(px2,py2,e.dir); break;
+      case 'wolf':     drawEnemy_wolf(px2,py2,e.dir); break;
+      case 'eagle':    drawEnemy_eagle(px2,py2,e.dir); break;
+      case 'bat':      drawEnemy_bat(px2,py2); break;
+      case 'spider':   drawEnemy_spider(px2,py2); break;
+      case 'skeleton': drawEnemy_skeleton(px2,py2,e.dir); break;
+    }
+    oc.globalAlpha=1;
+    // HP bar (2px tall, positioned above sprite)
+    const bw=e.maxHp*5;
+    rect(px2+(8-bw/2)|0,py2-3,bw,2,'#220000');
+    const hfrac=e.hp/e.maxHp;
+    rect(px2+(8-bw/2)|0,py2-3,~~(bw*hfrac),2,hfrac>0.5?'#00C830':hfrac>0.25?'#C88000':'#D02000');
+  });
+}
+
+function drawEnemy_snake(x,y,dir){
+  const g1='#1A7820',g2='#289030',g3='#389838',g4='#48B040',sc='#F8E000';
+  // Coiled body (S-curve)
+  rect(x+2,y+12,12,6,g1);
+  rect(x+3,y+11,10,8,g2);
+  rect(x+1,y+14,6,4,g2);
+  rect(x+8,y+10,5,6,g2);
+  // Scale pattern
+  for(let sx=3;sx<13;sx+=3) rect(x+sx,y+13,2,2,g3);
+  // Head
+  const hd=dir>0?1:-1;
+  const hx=x+(dir>0?8:2);
+  rect(hx,y+6,6,7,g2);
+  rect(hx+(dir>0?0:2),y+5,8,3,g3);
+  // Eye
+  rect(hx+(dir>0?4:1),y+7,2,2,sc); rect(hx+(dir>0?4:1),y+7,1,1,'#000000');
+  // Tongue
+  rect(hx+(dir>0?5:-1),y+10,2,1,'#F83048'); rect(hx+(dir>0?6:-2),y+9,1,2,'#F83048');
+  // Rattle/tail
+  rect(x+(dir>0?1:8),y+14,3,3,g4);
+}
+
+function drawEnemy_monkey(x,y,dir){
+  const br='#7B4830',bh=shadeC(br,25),bd=shadeC(br,-15),fc='#FFCCA0',fh=shadeC(fc,10);
+  // Tail
+  oc.strokeStyle=br; oc.lineWidth=2;
+  oc.beginPath();
+  oc.moveTo(x+(dir>0?2:12),y+18);
+  oc.bezierCurveTo(x+(dir>0?-6:18),y+12,x+(dir>0?-8:20),y+4,x+(dir>0?-4:18),y+2);
+  oc.stroke();
+  // Body
+  rect(x+3,y+12,10,12,br); rect(x+3,y+12,1,12,bh);
+  rect(x+4,y+11,8,2,bh);
+  // Belly
+  rect(x+5,y+14,6,8,fc); rect(x+5,y+14,1,8,fh);
+  // Arms
+  rect(x+1,y+12,3,8,br); rect(x+12,y+12,3,8,br);
+  rect(x+0,y+19,3,3,fc); rect(x+13,y+19,3,3,fc); // hands
+  // Legs
+  rect(x+4,y+22,4,5,br); rect(x+8,y+22,4,5,br);
+  rect(x+3,y+26,5,2,bd); rect(x+8,y+26,5,2,bd); // feet
+  // Head
+  rect(x+3,y+3,10,9,br); rect(x+3,y+3,1,9,bh);
+  // Face disc
+  rect(x+4,y+6,8,5,fc); rect(x+4,y+6,1,5,fh);
+  // Eyes
+  rect(x+5,y+7,2,2,'#1A1A1A'); rect(x+9,y+7,2,2,'#1A1A1A');
+  rect(x+5,y+7,1,1,'#FFFFFF'); rect(x+9,y+7,1,1,'#FFFFFF');
+  // Ears
+  rect(x+1,y+5,3,4,br); rect(x+12,y+5,3,4,br);
+  rect(x+2,y+6,2,3,fc); rect(x+12,y+6,2,3,fc);
+}
+
+function drawEnemy_scorpion(x,y,dir){
+  const sc='#D07820',sh=shadeC(sc,30),sd=shadeC(sc,-20),cl='#E09030',ey='#F80000';
+  // Stinger tail
+  oc.strokeStyle=sc; oc.lineWidth=3;
+  oc.beginPath();
+  oc.moveTo(x+(dir>0?2:14),y+12);
+  oc.bezierCurveTo(x+(dir>0?-4:18),y+8,x+(dir>0?-6:20),y+2,x+(dir>0?-2:16),y-2);
+  oc.stroke();
+  rect(x+(dir>0?-4:16),y-3,4,4,'#F81000'); // stinger tip
+  rect(x+(dir>0?-3:17),y-3,2,2,'#FF3020');
+  // Body segments
+  [[6,10,4,6,sc],[5,8,6,4,sh],[4,6,8,3,sc]].forEach(([bx,by,bw,bh,bc])=>{
+    rect(x+bx,y+by,bw,bh,bc);
+    rect(x+bx,y+by,bw,1,shadeC(bc,20));
+  });
+  // Head
+  const hx=dir>0?x+10:x+2;
+  rect(hx,y+8,6,6,sh);
+  rect(hx+(dir>0?4:0),y+9,2,2,ey);
+  // Claws
+  const cx1=dir>0?x+13:x-1,cx2=dir>0?x+14:x-2;
+  rect(cx1,y+6,4,5,cl); rect(cx2,y+3,3,5,cl);
+  rect(cx1,y+6,4,1,shadeC(cl,20)); rect(cx2,y+3,3,1,shadeC(cl,20));
+  // Legs (8)
+  oc.strokeStyle=sc; oc.lineWidth=1.5;
+  for(let li=0;li<4;li++){
+    oc.beginPath(); oc.moveTo(x+5+li*2,y+14); oc.lineTo(x+1+li*2,y+20); oc.stroke();
+    oc.beginPath(); oc.moveTo(x+5+li*2,y+14); oc.lineTo(x+9+li*2,y+20); oc.stroke();
+  }
+}
+
+function drawEnemy_lizard(x,y,dir){
+  const g='#508030',gh=shadeC(g,25),gd=shadeC(g,-20),gy='#F8E000';
+  // Tail
+  oc.strokeStyle=gd; oc.lineWidth=3;
+  oc.beginPath();
+  oc.moveTo(x+(dir>0?3:13),y+14);
+  oc.bezierCurveTo(x+(dir>0?-3:19),y+16,x+(dir>0?-8:22),y+18,x+(dir>0?-12:24),y+16);
+  oc.stroke();
+  // Body
+  rect(x+3,y+8,10,10,g); rect(x+3,y+8,1,10,gh);
+  // Scale stripe
+  for(let sy=10;sy<18;sy+=3) rect(x+4,y+sy,8,1,gd);
+  // Ridge
+  rect(x+7,y+6,3,4,gh);
+  // Legs
+  rect(x+2,y+14,3,5,gd); rect(x+11,y+14,3,5,gd);
+  rect(x+1,y+18,4,2,gd); rect(x+11,y+18,4,2,gd); // feet
+  // Head
+  const hx=dir>0?x+9:x+1;
+  rect(hx,y+8,7,6,g);
+  rect(hx+(dir>0?5:0),y+9,2,2,gh);
+  // Eye
+  rect(hx+(dir>0?4:1),y+9,2,2,gy); rect(hx+(dir>0?4:1),y+9,1,1,'#000000');
+  // Dewlap (throat)
+  rect(hx+(dir>0?2:-1),y+12,4,3,'#D05030');
+}
+
+function drawEnemy_wolf(x,y,dir){
+  const wc='#607880',wh=shadeC(wc,30),wd=shadeC(wc,-20),ns='#201818',ey='#F08000';
+  // Tail
+  oc.strokeStyle=wh; oc.lineWidth=4;
+  oc.beginPath();
+  oc.moveTo(x+(dir>0?2:14),y+10);
+  oc.bezierCurveTo(x+(dir>0?-4:18),y+5,x+(dir>0?-8:20),y+0,x+(dir>0?-5:18),y-4);
+  oc.stroke();
+  // Body
+  rect(x+2,y+8,12,10,wc); rect(x+2,y+8,1,10,wh);
+  rect(x+2,y+7,12,2,wh);
+  // Belly
+  rect(x+4,y+13,8,4,wh);
+  // Legs
+  rect(x+2,y+16,3,7,wd); rect(x+5,y+16,3,7,wd);
+  rect(x+8,y+16,3,7,wd); rect(x+11,y+16,3,7,wd);
+  rect(x+1,y+22,5,2,wd); rect(x+9,y+22,5,2,wd); // paws
+  // Neck+head
+  rect(x+(dir>0?8:2),y+3,6,7,wc);
+  const hx=dir>0?x+8:x+0;
+  rect(hx,y+0,9,9,wc); rect(hx,y+0,1,9,wh);
+  // Snout
+  rect(hx+(dir>0?7:0),y+4,5,4,wh);
+  rect(hx+(dir>0?9:0),y+5,4,3,wc);
+  // Nose
+  rect(hx+(dir>0?10:0),y+5,3,2,ns);
+  // Eye
+  rect(hx+(dir>0?4:2),y+2,3,3,ey); rect(hx+(dir>0?5:3),y+2,1,1,'#000000');
+  // Ear
+  rect(hx+(dir>0?1:6),y-3,4,5,wd);
+  rect(hx+(dir>0?2:7),y-2,2,3,wc);
+}
+
+function drawEnemy_eagle(x,y,dir){
+  const eb='#5A3828',eh=shadeC(eb,25),ew='#F8F0C0',ewh='#FFFCE8',bk='#F8A020';
+  const wf=Math.sin(tick*0.18)*5; // wing flap
+  // Wings (left and right)
+  oc.fillStyle=eb;
+  oc.beginPath();
+  oc.moveTo(x+8,y+12);
+  oc.bezierCurveTo(x,y+6+wf,x-8,y+10+wf,x-6,y+14+wf);
+  oc.bezierCurveTo(x-2,y+18,x+4,y+16,x+8,y+16);
+  oc.fill();
+  oc.fillStyle=eh;
+  oc.beginPath();
+  oc.moveTo(x+8,y+12);
+  oc.bezierCurveTo(x+16,y+6+wf,x+24,y+10+wf,x+22,y+14+wf);
+  oc.bezierCurveTo(x+18,y+18,x+12,y+16,x+8,y+16);
+  oc.fill();
+  // Wing feather tips
+  [[-5,-2],[-9,2],[23,-2],[27,2]].forEach(([fx,fy])=>{
+    rect(x+8+fx,y+12+fy+wf/2|0,3,2,wd||wd);
+  });
+  // Body
+  rect(x+4,y+8,8,12,eb); rect(x+4,y+8,1,12,eh);
+  // White head
+  rect(x+4,y+2,8,8,ew); rect(x+4,y+2,1,8,ewh);
+  // Beak
+  const bx=dir>0?x+11:x+1;
+  rect(bx,y+5,4,3,bk); rect(bx+(dir>0?2:0),y+7,2,2,shadeC(bk,-20));
+  // Eye
+  rect(x+(dir>0?8:3),y+4,3,3,'#F08000'); rect(x+(dir>0?9:4),y+4,1,1,'#000000');
+  // Talons
+  rect(x+4,y+19,4,3,'#C8A828'); rect(x+8,y+19,4,3,'#C8A828');
+  rect(x+3,y+22,3,2,'#A89020'); rect(x+7,y+22,3,2,'#A89020');
+}
+
+function drawEnemy_bat(x,y){
+  const bc='#5A1090',bh=shadeC(bc,35),bd=shadeC(bc,-20);
+  const wf=Math.sin(tick*0.25)*7;
+  // Wings
+  oc.fillStyle=bc;
+  oc.beginPath();
+  oc.moveTo(x+8,y+14);
+  oc.bezierCurveTo(x+2,y+8+wf,x-4,y+8+wf,x-6,y+12+wf);
+  oc.bezierCurveTo(x-4,y+18,x+2,y+18,x+8,y+18);
+  oc.fill();
+  oc.fillStyle=bh;
+  oc.beginPath();
+  oc.moveTo(x+8,y+14);
+  oc.bezierCurveTo(x+14,y+8+wf,x+20,y+8+wf,x+22,y+12+wf);
+  oc.bezierCurveTo(x+20,y+18,x+14,y+18,x+8,y+18);
+  oc.fill();
+  // Wing membrane veins
+  oc.strokeStyle=bd; oc.lineWidth=1;
+  oc.beginPath(); oc.moveTo(x+8,y+14); oc.lineTo(x-2,y+16+wf/2); oc.stroke();
+  oc.beginPath(); oc.moveTo(x+8,y+14); oc.lineTo(x+18,y+16+wf/2); oc.stroke();
+  // Body
+  rect(x+4,y+10,8,10,bc); rect(x+4,y+10,1,10,bh);
+  // Head
+  rect(x+3,y+5,10,8,bc); rect(x+3,y+5,1,8,bh);
+  // Ears
+  rect(x+3,y+1,3,6,bd); rect(x+10,y+1,3,6,bd);
+  rect(x+4,y+2,2,4,shadeC(bc,50)); rect(x+10,y+2,2,4,shadeC(bc,50));
+  // Eyes
+  rect(x+5,y+7,2,2,'#F80000'); rect(x+9,y+7,2,2,'#F80000');
+  rect(x+5,y+7,1,1,'#FF8000'); rect(x+9,y+7,1,1,'#FF8000');
+  // Fangs
+  rect(x+6,y+13,2,2,'#FFFFFF'); rect(x+9,y+13,2,2,'#FFFFFF');
+}
+
+function drawEnemy_spider(x,y){
+  const sc='#181818',sh=shadeC(sc,30),sm='#280808',ey='#F80000';
+  // Legs (8) with joints
+  oc.strokeStyle='#303030'; oc.lineWidth=2;
+  const legDefs=[
+    [7,14,-10,6,-14,12],[7,14,-8,4,-12,8],[7,14,-6,2,-10,4],[7,14,-4,0,-8,0],
+    [9,14,10,6,14,12],[9,14,8,4,12,8],[9,14,6,2,10,4],[9,14,4,0,8,0]
+  ];
+  legDefs.forEach(([bx,by,mx,my,ex,ey2])=>{
+    oc.beginPath(); oc.moveTo(x+bx,y+by); oc.lineTo(x+bx+mx,y+by+my); oc.lineTo(x+bx+ex,y+by+ey2); oc.stroke();
+  });
+  // Abdomen
+  rect(x+3,y+12,10,10,sc);
+  rect(x+2,y+13,12,8,sc);
+  rect(x+2,y+13,1,8,sh);
+  rect(x+2,y+13,12,1,sh);
+  // Hourglass marking
+  rect(x+6,y+14,4,2,'#F80000'); rect(x+7,y+19,2,2,'#F80000');
+  rect(x+5,y+16,6,3,'#D00000');
+  // Cephalothorax
+  rect(x+4,y+7,8,7,shadeC(sc,15));
+  rect(x+4,y+7,1,7,sh);
+  // Eyes (8 tiny)
+  [[5,8],[7,8],[9,8],[11,8],[5,10],[7,10],[9,10],[11,10]].forEach(([ex2,ey3])=>{
+    rect(x+ex2,y+ey3,1,1,ey);
+  });
+  // Chelicerae/fangs
+  rect(x+6,y+13,2,2,'#808080'); rect(x+9,y+13,2,2,'#808080');
+}
+
+function drawEnemy_skeleton(x,y,dir){
+  const sb='#D0D8E0',sh=shadeC(sb,20),sd=shadeC(sb,-25),re='#F81000';
+  // Legs (with bones)
+  rect(x+4,y+18,3,7,sd); rect(x+4,y+18,1,7,sh);
+  rect(x+9,y+18,3,7,sd); rect(x+9,y+18,1,7,sh);
+  // Knee joints
+  rect(x+4,y+21,3,2,sb); rect(x+9,y+21,3,2,sb);
+  // Feet
+  rect(x+3,y+24,5,2,sd); rect(x+8,y+24,5,2,sd);
+  rect(x+3,y+24,5,1,sb); rect(x+8,y+24,5,1,sb);
+  // Pelvis
+  rect(x+3,y+16,10,4,sb); rect(x+3,y+16,10,1,sh);
+  // Ribcage
+  rect(x+4,y+8,8,9,sd);
+  for(let ri=0;ri<3;ri++){
+    rect(x+3,y+9+ri*3,10,2,sb);
+    rect(x+3,y+9+ri*3,10,1,sh);
+    rect(x+4,y+10+ri*3,8,1,'#808898');
+  }
+  // Spine
+  rect(x+7,y+8,2,8,sb); rect(x+7,y+8,1,8,sh);
+  // Arms
+  rect(x+1,y+9,3,8,sb); rect(x+1,y+9,1,8,sh);
+  rect(x+12,y+9,3,8,sb); rect(x+12,y+9,1,8,sh);
+  // Elbow joints
+  rect(x+1,y+13,3,2,sd); rect(x+12,y+13,3,2,sd);
+  // Skull
+  rect(x+4,y+1,8,8,sb); rect(x+4,y+1,1,8,sh);
+  rect(x+5,y+0,6,2,sb); // dome
+  // Cheekbones / jaw
+  rect(x+3,y+6,10,4,sh);
+  rect(x+4,y+8,8,3,sd); // jaw shadow
+  // Eye sockets
+  rect(x+5,y+3,3,3,'#1020A0'); rect(x+8,y+3,3,3,'#1020A0');
+  rect(x+5,y+3,3,1,re); rect(x+8,y+3,3,1,re);
+  rect(x+6,y+4,1,1,'#F80000'); rect(x+9,y+4,1,1,'#F80000');
+  // Nose cavity
+  rect(x+7,y+6,2,2,'#202030');
+  // Teeth
+  for(let ti=0;ti<4;ti++) rect(x+5+ti*2,y+9,1,2,sh);
+  // Sword
+  const sdir=dir>0?1:-1;
+  rect(x+(dir>0?13:0),y+12,sdir>0?14:-14|0,2,shadeC(sb,-5));
+  rect(x+(dir>0?12:2),y+10,3,6,'#C8A020'); // guard
+  rect(x+(dir>0?12:3),y+10,3,1,'#F0D040');
+}
+
+// ─── SCREEN DRAW ─────────────────────────────────────────────────────────────
+function drawScreen(){
+  const sc=SCREENS[player.currentScreen];
+  drawBackground(sc.biome);
+  for(let ty=0;ty<ROWS;ty++) for(let tx=0;tx<COLS;tx++){
+    const tile=sc.map[ty][tx];
+    if(tile!==T.AIR) drawTile(tile,tx,ty,sc.biome);
+  }
+  sc.npcs.forEach(npc=>drawNPC(npc));
+}
+
+// ─── HUD ─────────────────────────────────────────────────────────────────────
+function drawHUD(){
+  const sc=SCREENS[player.currentScreen];
+  // HUD bar background with texture
+  rect(0,0,320,16,'rgba(0,0,0,0.82)');
+  // Gold top line
+  rect(0,0,320,1,'#60408080');
+  rect(0,15,320,1,'#604080C0');
+  // Rivets
+  [[3,7],[316,7],[159,7]].forEach(([rx,ry])=>{
+    rect(rx,ry,2,2,'#806040'); rect(rx,ry,1,1,'#C09060');
+  });
+
+  // HP — ruby hearts with glow
+  for(let i=0;i<player.maxHp;i++){
+    const hx=6+i*13, hy=4, full=i<player.hp;
+    if(full){
+      // Glow
+      oc.globalAlpha=0.25+0.1*Math.abs(Math.sin(tick*0.06));
+      oc.fillStyle='#FF2020'; oc.fillRect(hx-1,hy-1,11,10); oc.globalAlpha=1;
+    }
+    // Heart shape (5×5 pixel heart scaled x2)
+    const hc=full?'#F03030':'#3A1010', hh=full?'#FF6060':'#501818';
+    [[1,0,2,2],[4,0,2,2],[0,1,6,3],[1,3,4,2],[2,4,2,1]].forEach(([hx2,hy2,hw,hh2])=>rect(hx+hx2,hy+hy2,hw,hh2,hc));
+    if(full) rect(hx+1,hy+1,2,1,hh);
+  }
+
+  // Gold coin icon (animated spin)
+  const coinFrame=(tick>>3)%4;
+  const coinW=[8,6,4,6][coinFrame], coinX=68+(8-coinW)/2|0;
+  rect(coinX,4,coinW,8,'#F8C820');
+  if(coinW>=6){rect(coinX,4,coinW,1,'#FFE860'); rect(coinX,4,1,8,'#FFE060');}
+  if(coinW>=8) rect(coinX+3,5,2,6,'#C09010');
+  drawPixelText(String(player.gold),80,5,'#F8D040',1);
+
+  // Seal gems (4 small gems)
+  for(let i=0;i<4;i++){
+    const has=i<player.questItems.length;
+    const gx=108+i*10, gy=5;
+    const gc=has?'#9040F8':'#2A1850', gh=has?'#C080FF':'#3A2060';
+    rect(gx+1,gy,4,1,gc); rect(gx,gy+1,6,4,gc); rect(gx+1,gy+5,4,1,gc);
+    if(has){rect(gx+1,gy+1,2,2,gh);}
+  }
+
+  // Location name with fantasy ornament
+  const nm=sc.name.toUpperCase();
+  const nw=pixelTextWidth(nm,1);
+  const nx=320-nw-8;
+  rect(nx-3,3,nw+6,10,'rgba(0,0,0,0.5)');
+  rect(nx-3,3,2,1,'#806040'); rect(nx+nw+1,3,2,1,'#806040');
+  drawPixelText(nm,nx,5,'#B89060',1);
+}
+
+// ─── PIXEL UI PANELS ─────────────────────────────────────────────────────────
+function ppanel(x,y,w,h,bg,border){
+  const bh=shadeC(border,-30), bl=shadeC(border,30);
+  // Drop shadow
+  oc.fillStyle='rgba(0,0,0,0.5)'; oc.fillRect(x+3,y+3,w,h);
+  // Fill
+  rect(x,y,w,h,bg);
+  // Outer border
+  rect(x,y,w,1,border); rect(x,y+h-1,w,1,border);
+  rect(x,y,1,h,border); rect(x+w-1,y,1,h,border);
+  // Inner bevel highlight (top-left)
+  rect(x+1,y+1,w-2,1,bl);
+  rect(x+1,y+1,1,h-2,bl);
+  // Inner bevel shadow (bottom-right)
+  rect(x+1,y+h-2,w-2,1,bh);
+  rect(x+w-2,y+1,1,h-2,bh);
+  // Corner ornaments
+  const co=shadeC(border,50);
+  rect(x,y,3,1,co); rect(x,y,1,3,co);
+  rect(x+w-3,y,3,1,co); rect(x+w-1,y,1,3,co);
+  rect(x,y+h-1,3,1,co); rect(x,y+h-3,1,3,co);
+  rect(x+w-3,y+h-1,3,1,co); rect(x+w-1,y+h-3,1,3,co);
+}
+
+function drawInventory(){
+  ppanel(4,4,312,216,'#08060E','#9060F0');
+  // Header with ornate banner
+  rect(4,4,312,20,'#120A28');
+  rect(4,23,312,2,'#9060F0');
+  // Decorative header side ornaments
+  rect(8,8,4,12,'#6040B0'); rect(300,8,4,12,'#6040B0');
+  rect(10,7,2,14,'#9060F0'); rect(302,7,2,14,'#9060F0');
+  const iw=pixelTextWidth('INVENTORY',2);
+  drawPixelText('INVENTORY',(320-iw)/2|0,8,'#C898FF',2);
+
+  // QUEST SEALS section
+  ppanel(8,26,148,110,'#0C0820','#7050C0');
+  rect(8,26,148,14,'#180C40');
+  rect(8,39,148,1,'#7050C0');
+  drawPixelText('QUEST SEALS',12,29,'#A080E0',1);
+  const QUEST=['Ancient Map','Desert Key','Mountain Gem','Temple Seal'];
+  const SEAL_COLORS=['#F8D040','#40C8F8','#60F860','#F84060'];
+  QUEST.forEach((q,i)=>{
+    const has=player.questItems.includes(q);
+    const sc=SEAL_COLORS[i];
+    ppanel(12,42+i*23,140,20,has?'#101C08':'#0A0818',has?sc:'#302850');
+    // Gem icon
+    if(has){
+      rect(16,46+i*23,12,12,sc);
+      rect(16,46+i*23,12,1,shadeC(sc,30)); rect(16,46+i*23,1,12,shadeC(sc,30));
+      rect(17,47+i*23,5,5,shadeC(sc,50));
+    } else {
+      rect(16,46+i*23,12,12,'#181428');
+      rect(16,46+i*23,12,1,'#302850'); rect(16,46+i*23,1,12,'#302850');
+      drawPixelText('○',18,47+i*23,'#302850',1);
+    }
+    drawPixelText(q.toUpperCase().slice(0,14),32,48+i*23,has?shadeC(sc,20):'#504870',1);
+  });
+
+  // EQUIPMENT section
+  ppanel(160,26,152,110,'#0C0820','#7050C0');
+  rect(160,26,152,14,'#180C40');
+  rect(160,39,152,1,'#7050C0');
+  drawPixelText('EQUIPMENT',164,29,'#80C8D0',1);
+  const items=[];
+  if(player.hasSword) items.push({ic:'★',n:'BLADE OF DAWN',c:'#F8D040'});
+  if(player.hasBoots) items.push({ic:'►',n:'DESERT BOOTS',c:'#F09040'});
+  player.inventory.forEach(it=>items.push({ic:'>',n:it.toUpperCase().slice(0,14),c:'#C0D8E0'}));
+  if(!items.length) items.push({ic:'-',n:'EMPTY',c:'#383050'});
+  items.slice(0,6).forEach((it,i)=>{
+    rect(164,42+i*11,144,10,i%2===0?'#0E0C1A':'#0A0818');
+    drawPixelText(it.ic,166,43+i*11,it.c,1);
+    drawPixelText(it.n,176,43+i*11,it.c,1);
+  });
+
+  // CONSUMABLES section
+  ppanel(8,140,304,58,'#0C0820','#7050C0');
+  rect(8,140,304,14,'#180C40');
+  rect(8,153,304,1,'#7050C0');
+  drawPixelText('SUPPLIES',12,143,'#E0C060',1);
+  // Potion
+  ppanel(12,156,88,38,'#0A1408','#408040');
+  rect(12,156,88,1,'#60B060');
+  drawPixelText('♥',16,160,'#F04040',2); drawPixelText('POTIONS',30,160,'#80D070',1);
+  drawPixelText(String(player.potions),30,170,'#F8F860',2);
+  // Torch
+  ppanel(104,156,88,38,'#140E04','#C06020');
+  rect(104,156,88,1,'#E08030');
+  drawPixelText('★',108,160,'#F08020',2); drawPixelText('TORCHES',122,160,'#E09040',1);
+  drawPixelText(String(player.torches),122,170,'#F8F860',2);
+  // Gold
+  ppanel(196,156,112,38,'#140C00','#D0A020');
+  rect(196,156,112,1,'#F0C030');
+  drawPixelText('G',200,160,'#F8D040',2); drawPixelText('GOLD',218,160,'#F0C040',1);
+  drawPixelText(String(player.gold),218,170,'#F8F860',2);
+  // Hint
+  drawPixelText('[P]=POTION  [I]/[ESC]=CLOSE',38,203,'#302850',1);
+}
+
+function drawDialogue(){
+  if(!dialogueData) return;
+  // Parchment-style dialogue box
+  ppanel(4,150,312,70,'#1A0E08','#C8A050');
+  // Parchment texture lines
+  for(let py=154;py<218;py+=4) rect(6,py,308,1,'rgba(200,160,80,0.06)');
+  // Speaker portrait area
+  rect(4,150,72,70,'#100A04');
+  rect(76,150,1,70,'#C8A050');
+  // NPC icon placeholder (colored square with initial)
+  const npcColor=dialogueData.npc.id?NPC_DEFS[dialogueData.npc.id]?.coat||'#604020':'#604020';
+  rect(12,158,48,48,npcColor);
+  rect(12,158,48,1,shadeC(npcColor,30)); rect(12,158,1,48,shadeC(npcColor,30));
+  // NPC initial
+  const init=dialogueData.npc.name[0]||'?';
+  drawPixelText(init,30,174,'#F8E0A0',4);
+  // Speaker name ribbon
+  rect(78,150,238,14,'#2A1A06');
+  rect(78,163,238,1,'#C8A050');
+  drawPixelText(dialogueData.npc.name.toUpperCase().slice(0,20),82,153,'#F8D060',1);
+  // Text with word wrap
+  const words=(dialogueData.lines[dialogueData.index]||'').split(' ');
+  let cx2=80,cy2=168;
+  words.forEach(w=>{
+    const tw=pixelTextWidth(w.toUpperCase())+4;
+    if(cx2+tw>312){cx2=80;cy2+=9;}
+    if(cy2<214) drawPixelText(w.toUpperCase(),cx2,cy2,'#E8D8B0',1);
+    cx2+=tw;
+  });
+  // Blink arrow
+  if((tick>>4)&1){
+    drawPixelText('►',308,210,'#F8C030',1);
+  }
+}
+
+function drawShop(){
+  if(!shopData) return;
+  ppanel(18,20,284,184,'#0C0A04','#D4A428');
+  // Header banner
+  rect(18,20,284,22,'#1C1408');
+  rect(18,41,284,2,'#D4A428');
+  // Shop sign ornament
+  rect(26,24,16,14,'#8B4A08'); rect(27,25,14,12,'#C07018'); rect(29,27,10,8,'#E09020');
+  drawPixelText('★',30,28,'#F8D040',1);
+  rect(278,24,16,14,'#8B4A08'); rect(279,25,14,12,'#C07018'); rect(281,27,10,8,'#E09020');
+  drawPixelText('★',282,28,'#F8D040',1);
+  const sw=pixelTextWidth('MERCHANT',2);
+  drawPixelText('MERCHANT',(320-sw)/2|0,26,'#F8D040',2);
+  const items=[
+    {k:'1',n:'HEALTH POTION',desc:'RESTORE 2 HP',cost:5,own:player.potions,ic:'♥'},
+    {k:'2',n:'TORCH',desc:'LIGHT THE WAY',cost:3,own:player.torches,ic:'★'},
+  ];
+  if(shopData.sellsBoots) items.push({k:'3',n:'DESERT BOOTS',desc:'RESIST HEAT',cost:8,own:player.hasBoots?1:0,ic:'►'});
+  items.forEach((it,i)=>{
+    const ok=player.gold>=it.cost;
+    ppanel(26,48+i*44,268,40,ok?'#0A1208':'#100C06',ok?'#60B040':'#806020');
+    // Item icon
+    rect(30,52+i*44,26,26,ok?'#142010':'#0E0C04');
+    rect(30,52+i*44,26,1,ok?'#60B040':'#806020');
+    rect(30,52+i*44,1,26,ok?'#60B040':'#806020');
+    drawPixelText(it.ic,36,58+i*44,ok?'#80F040':'#806040',2);
+    // Name and desc
+    drawPixelText('['+it.k+'] '+it.n,60,52+i*44,ok?'#E8F8D0':'#808060',1);
+    drawPixelText(it.desc,60,62+i*44,ok?'#A0C880':'#504840',1);
+    // Cost
+    const cw=pixelTextWidth(it.cost+'G',2);
+    drawPixelText(it.cost+'G',280-cw,54+i*44,'#F8D040',2);
+    drawPixelText('OWN:'+it.own,256,68+i*44,'#807050',1);
+  });
+  // Gold bar
+  rect(18,182,284,22,'#141008');
+  rect(18,183,284,1,'#D4A428');
+  drawPixelText('YOUR GOLD:',26,188,'#C8A040',1);
+  drawPixelText(String(player.gold),100,186,'#F8D040',2);
+  drawPixelText('[E] CLOSE SHOP',200,188,'#605030',1);
+}
+
+function drawPopup(){
+  if(!popupData) return;
+  popupData.timer--;
+  if(popupData.timer<=0){popupData=null;return;}
+  const fi=popupData.timer>180?Math.min(1,(200-popupData.timer)/8):1;
+  const fo=popupData.timer<40?popupData.timer/40:1;
+  oc.globalAlpha=fi*fo;
+  const lines=popupData.text.split('\n');
+  const bw=220,bh=20+lines.length*14+8;
+  const bx=(320-bw)>>1,by=18;
+  // Glow behind popup
+  for(let gs=6;gs>0;gs--){
+    oc.fillStyle=`rgba(80,200,80,${0.04*(1-gs/6)})`;
+    oc.fillRect(bx-gs,by-gs,bw+gs*2,bh+gs*2);
+  }
+  ppanel(bx,by,bw,bh,'#080E08','#48C040');
+  // Treasure banner for first line
+  rect(bx,by,bw,16,'#102010');
+  rect(bx,by+15,bw,1,'#48C040');
+  // Star icons flanking title
+  drawPixelText('★',bx+4,by+4,'#F8D040',1);
+  drawPixelText('★',bx+bw-10,by+4,'#F8D040',1);
+  lines.forEach((l,i)=>{
+    const lw=pixelTextWidth(l.toUpperCase().slice(0,22),1);
+    drawPixelText(l.toUpperCase().slice(0,22),bx+(bw-lw)/2|0,by+5+i*14,i===0?'#F8E840':'#A8E8A0',1);
+  });
+  oc.globalAlpha=1;
+}
+
+function drawWin(){
+  // Animated starfield background
+  rect(0,0,320,224,'#040208');
+  bgStars();
+  // Radial golden glow from center
+  for(let gr=80;gr>0;gr-=4){
+    oc.globalAlpha=0.025;
+    oc.fillStyle=`hsl(${45+gr/2},100%,60%)`;
+    oc.beginPath(); oc.arc(160,112,gr+~~(8*Math.sin(tick*0.04)),0,Math.PI*2); oc.fill();
+  }
+  oc.globalAlpha=1;
+  // Floating sparkles
+  for(let i=0;i<24;i++){
+    const sx=(i*53+tick*2)%320,sy=((i*37+tick*1)%200)+10;
+    if((tick+i*7)%5<2){
+      rect(sx,sy,3,3,'#F8D040'); rect(sx+1,sy,1,1,'#FFFFFF');
+      rect(sx,sy+1,1,1,'#FFFFFF'); rect(sx+2,sy+2,1,1,'#FFE080');
+    }
+  }
+  ppanel(12,18,296,188,'#0C0800','#F0B818');
+  // Title banner
+  rect(12,18,296,28,'#1C1000');
+  rect(12,45,296,2,'#F0B818');
+  // Crowns
+  [[18,20],[292,20]].forEach(([cx,cy])=>{
+    rect(cx,cy+6,16,10,'#F8C020'); rect(cx+2,cy+2,12,6,'#F8C020');
+    rect(cx,cy+4,4,4,'#F8C020'); rect(cx+6,cy,4,6,'#F8C020'); rect(cx+12,cy+4,4,4,'#F8C020');
+    rect(cx+1,cy+7,3,3,'#E09000'); rect(cx+7,cy+1,2,3,'#E09000');
+  });
+  const vw=pixelTextWidth('VICTORY!',3);
+  drawPixelText('VICTORY!',(320-vw)/2|0,22,'#F8D040',3);
+  drawPixelText('THE ANCIENT CURSE IS BROKEN!',28,54,'#F0E890',1);
+  drawPixelText('THE KINGDOM IS SAVED!',60,66,'#C8F0A0',1);
+  // Seal display
+  const QUEST=['Ancient Map','Desert Key','Mountain Gem','Temple Seal'];
+  const SCOL=['#F8D040','#40C8F8','#60F860','#F84060'];
+  rect(14,82,292,36,'#0A0A0A');
+  rect(14,82,292,1,'#D0A020'); rect(14,117,292,1,'#D0A020');
+  QUEST.forEach((q,i)=>{
+    const gx=18+i*73;
+    rect(gx,86,66,28,SCOL[i]+'30');
+    rect(gx,86,66,1,SCOL[i]); rect(gx,86,1,28,SCOL[i]);
+    rect(gx+22,88,22,22,SCOL[i]);
+    rect(gx+23,89,10,10,shadeC(SCOL[i],40));
+    drawPixelText('✔',gx+24,90,'#FFFFFF',2);
+    drawPixelText(q.slice(0,6).toUpperCase(),gx+2,110,'#E0E080',1);
+  });
+  // Stats
+  ppanel(14,122,292,56,'#0C0800','#D0A020');
+  rect(14,122,292,14,'#181000');
+  drawPixelText('FINAL SCORE',14,124,'#F0C040',1);
+  drawPixelText('GOLD: '+player.gold,20,140,'#F8D040',2);
+  drawPixelText('HP REMAINING: '+player.hp+'/'+player.maxHp,170,140,'#80E880',1);
+  drawPixelText('PRESS [E] OR REFRESH TO PLAY AGAIN',20,160,'#504020',1);
+}
+
+function drawDead(){
+  // Dark vignette
+  rect(0,0,320,224,'#040000');
+  // Pulsing blood red vignette
+  const rv=~~(40+30*Math.abs(Math.sin(tick*0.05)));
+  for(let vr=80;vr>0;vr-=8){
+    oc.globalAlpha=(80-vr)/80*0.4;
+    oc.fillStyle=`rgb(${rv+40},0,0)`;
+    oc.fillRect(160-vr*2,112-vr,vr*4,vr*2);
+  }
+  oc.globalAlpha=1;
+  // Falling skull particles
+  for(let i=0;i<6;i++){
+    const px=(i*83+tick*2)%320,py=(i*37+tick*3)%224;
+    if((tick+i*11)%3<1){
+      // Mini skull
+      rect(px,py,8,6,'#808080'); rect(px+1,py-1,6,2,'#606060');
+      rect(px+1,py+1,2,3,'#101010'); rect(px+5,py+1,2,3,'#101010');
+    }
+  }
+  // Death panel
+  ppanel(56,54,208,116,'#100000','#C83020');
+  rect(56,54,208,24,'#200404');
+  rect(56,77,208,2,'#C83020');
+  // Skull icon
+  rect(68,59,16,14,'#C0B0A0'); rect(70,57,12,4,'#A09890');
+  rect(69,66,4,5,'#080808'); rect(79,66,4,5,'#080808');
+  rect(73,70,6,1,'#080808'); rect(72,71,2,3,'#080808'); rect(76,71,2,3,'#080808');
+  const dw=pixelTextWidth('YOU HAVE FALLEN',2);
+  drawPixelText('YOU HAVE FALLEN',(320-dw)/2|0,58,'#F84040',2);
+  drawPixelText('YOUR QUEST CONTINUES....',70,84,'#C08080',1);
+  drawPixelText('ALL ITEMS PRESERVED',74,96,'#908090',1);
+  // Decorative divider
+  rect(70,108,180,1,'#601010'); rect(72,109,176,1,'#400808');
+  if((tick>>4)&1){
+    const rw=pixelTextWidth('[E] RISE AGAIN',2);
+    drawPixelText('[E] RISE AGAIN',(320-rw)/2|0,116,'#F06050',2);
+  }
+  drawPixelText('THE DARKNESS AWAITS YOUR RETURN',30,148,'#300808',1);
+}
+
+function drawTransition(){
+  if(!screenTransition) return;
+  const t2=screenTransition.timer;
+  const a=t2>15?(30-t2)/15:t2/15;
+  oc.globalAlpha=1-a;
+  rect(0,0,320,224,'#000000');
+  oc.globalAlpha=1;
+}
+
+
+// ─── TITLE SCREEN ────────────────────────────────────────────────────────────
+function drawTitle() {
+  // Deep sky gradient
+  for (let y = 0; y < 224; y++) {
+    const t2 = y / 224;
+    const r = Math.floor(8 + t2 * 28);
+    const g = Math.floor(4 + t2 * 12);
+    const b = Math.floor(38 + t2 * 55);
+    rect(0, y, 320, 1, `rgb(${r},${g},${b})`);
+  }
+
+  // Stars
+  bgStars();
+
+  // Nebula glow behind title
+  for (let c = 0; c < 320; c += 2) for (let r = 0; r < 100; r += 2) {
+    const dx = c - 160, dy = r - 50;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 90) {
+      const al = ~~((1 - dist / 90) * 12);
+      rect(c, r, 2, 2, `rgba(100,30,180,${al/255})`);
+    }
+  }
+
+  // Distant mountain silhouettes
+  [[0,160,80,'#1A1035'],[60,140,100,'#141028'],[160,148,90,'#1A1035'],[250,155,70,'#141028']].forEach(([bx,by,bw,bc]) => {
+    for (let xi = 0; xi < bw; xi++) {
+      const h = Math.round(by - Math.max(0, (bw/2 - Math.abs(xi - bw/2)) * 1.8));
+      rect(bx+xi, h, 1, 224-h, bc);
+    }
+  });
+
+  // Castle silhouette in distance
+  const cas=[
+    // [x, groundY, w, battlements]
+    [80, 196, 160, true]
+  ];
+  // Castle walls
+  rect(80,164,160,36,'#180F30');
+  // Castle towers
+  [[80,140,30,164],[210,136,30,164]].forEach(([tx,ty,tw,bh])=>{
+    rect(tx,ty,tw,224-ty,'#1A1035');
+    // Battlements
+    for(let bx=tx;bx<tx+tw;bx+=6){ rect(bx,ty,4,6,'#1A1035'); rect(bx+4,ty,2,6,'#080415'); }
+    // Tower window
+    rect(tx+tw/2-3|0,ty+14,6,8,'#C890F880');
+    // Glow from window
+    oc.globalAlpha=0.3; oc.fillStyle='#A060F0'; oc.fillRect(tx+tw/2-5|0,ty+12,10,12); oc.globalAlpha=1;
+  });
+  // Gate arch
+  for(let ax=0;ax<20;ax++){
+    const arch=~~(12*Math.sin(ax/19*Math.PI));
+    rect(140+ax,196-arch,2,arch+28,'#0E0820');
+  }
+  // Battlements on main wall
+  for(let bx=100;bx<220;bx+=8){ rect(bx,164,6,8,'#180F30'); rect(bx+6,164,2,8,'#0A0818'); }
+  // Flag on towers
+  [[82,140],[212,136]].forEach(([fx,fy])=>{
+    rect(fx+13,fy-18,1,18,'#9060A0');
+    const fc=(tick>>3)%3; rect(fx+14,fy-18+fc,8,6,'#C060E0'); rect(fx+14,fy-18+fc,8,1,'#E080FF');
+  });
+  // Ground strip with cobblestones
+  rect(0, 196, 320, 28, '#100820');
+  rect(0, 196, 320, 2, '#201438');
+  // Cobblestone pattern
+  for(let gx=0;gx<320;gx+=16){
+    for(let gy=0;gy<3;gy++){
+      const ox=(gy%2)*8;
+      rect(gx+ox,198+gy*7,14,6,'#160C28');
+      rect(gx+ox,198+gy*7,14,1,'#201840');
+      rect(gx+ox,198+gy*7,1,6,'#201840');
+    }
+  }
+
+  // Title logo
+  const titleScale = 4;
+  const title1 = "MINSKY'S";
+  const title2 = "QUEST";
+  const tw1 = pixelTextWidth(title1, titleScale);
+  const tw2 = pixelTextWidth(title2, titleScale);
+
+  // Glow behind text
+  oc.globalAlpha = 0.3;
+  for (let s = 4; s >= 1; s--) {
+    rect((320-tw1)/2-s, 18-s, tw1+s*2, 5*titleScale+s*2, '#8040FF');
+  }
+  oc.globalAlpha = 1;
+
+  // Shadow
+  drawPixelText(title1, (320-tw1)/2 + 2, 22, '#1A0836', titleScale);
+  drawPixelText(title2, (320-tw2)/2 + 2, 74, '#1A0836', titleScale);
+  // Main title gold
+  drawPixelText(title1, (320-tw1)/2, 20, '#F8D040', titleScale);
+  // Subtitle purple
+  drawPixelText(title2, (320-tw2)/2, 72, '#C060FF', titleScale);
+
+  // Decorative lines
+  rect(30, 114, 260, 2, '#5030A0');
+  rect(34, 117, 252, 1, '#3A1870');
+
+  // Player hero sprite centered
+  const heroX = 144, heroY = 160;
+  // Drop shadow
+  oc.fillStyle = 'rgba(0,0,0,0.4)';
+  oc.beginPath(); oc.ellipse(heroX+6, heroY+24, 10, 4, 0, 0, Math.PI*2); oc.fill();
+  spr(heroX, heroY, PLAYER_ROWS, PLAYER_PAL);
+
+  // Descriptions
+  drawPixelText('COLLECT ALL 4 SEALS', (320 - pixelTextWidth('COLLECT ALL 4 SEALS',1))/2|0, 126, '#A080D0', 1);
+  drawPixelText('AND SAVE THE KINGDOM', (320 - pixelTextWidth('AND SAVE THE KINGDOM',1))/2|0, 138, '#8060B0', 1);
+  drawPixelText('ARROWS:MOVE  Z:ATTACK  E:INTERACT  I:INVENTORY', 4, 150, '#402868', 1);
+
+  // Blinking press-start
+  if ((tick >> 4) & 1) {
+    const prompt = 'PRESS ANY KEY TO START';
+    const pw = pixelTextWidth(prompt, 2);
+    drawPixelText(prompt, (320-pw)/2|0, 200, '#F8F040', 2);
+  }
+
+  // Credit
+  drawPixelText('F = FULLSCREEN', 4, 214, '#302050', 1);
+  drawPixelText('GEAR = SETTINGS', 232, 214, '#302050', 1);
+}
+
+// ─── GAME LOOP ────────────────────────────────────────────────────────────────
+let lastTime = 0;
+function loop(ts) {
+  const dt = Math.min(ts - lastTime, 50);
+  lastTime = ts;
+  tick++;
+
+  handleInput();
+
+  // Screen transition tick
+  if (screenTransition) {
+    screenTransition.timer--;
+    if (screenTransition.timer === 15) {
+      doTransition(screenTransition.targetScreen, screenTransition.sx, screenTransition.sy);
+    }
+    if (screenTransition.timer <= 0) screenTransition = null;
+  }
+
+  if (gameState === 'playing' && !settingsOpen) {
+    updatePlayer(dt);
+    updateEnemies(dt);
+  }
+
+  // Draw everything to low-res offscreen canvas
+  oc.clearRect(0, 0, 320, 224);
+  // Hide settings button on title screen
+  settBtn.style.display = gameState === 'title' ? 'none' : 'flex';
+
+  if (gameState === 'title') {
+    drawTitle();
+  } else {
+    drawScreen();
+    drawEnemies();
+    drawPlayer();
+    if (gameState === 'inventory') drawInventory();
+    else if (gameState === 'dialogue') drawDialogue();
+    else if (gameState === 'shop') drawShop();
+    else if (gameState === 'win') drawWin();
+    else if (gameState === 'dead') drawDead();
+    drawPopup();
+    if (screenTransition) drawTransition();
+    drawHUD();
+    if (gameState === 'playing') {
+      rect(0, 216, 320, 8, 'rgba(0,0,0,0.65)');
+      drawPixelText('Z:ATK  E:TALK  I:INV  P:POT  F:FS', 4, 218, '#404060', 1);
+    }
+  }
+
+  // Scale osc to fill window, letterboxed, no smoothing
+  ctx.imageSmoothingEnabled = false;
+  const cw = canvas.width, ch = canvas.height;
+  const scale = Math.min(cw / 320, ch / 224);
+  const dw = Math.floor(320 * scale), dh = Math.floor(224 * scale);
+  const dx = Math.floor((cw - dw) / 2), dy = Math.floor((ch - dh) / 2);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, cw, ch);
+  ctx.drawImage(osc, 0, 0, 320, 224, dx, dy, dw, dh);
+
+  requestAnimationFrame(loop);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+initEnemies(0);
+player.x = 2; player.y = 10;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
