@@ -17,13 +17,13 @@ html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
 /* ── Settings button ── */
 #settings-btn {
   position: fixed; top: 12px; right: 14px; z-index: 100;
-  width: 72px; height: 72px;
+  width: 48px; height: 48px;
   background: rgba(10,5,30,0.85);
   border: 2px solid #5a3aaa;
   border-radius: 4px;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  font-size: 36px;
+  font-size: 24px;
   color: #c0a0ff;
   transition: background 0.15s, border-color 0.15s;
   user-select: none;
@@ -160,9 +160,60 @@ input[type=range].music-slider::-webkit-slider-thumb {
   border: 2px solid #c090ff;
 }
 .music-note { color: #5040a0; font-size: 9px; line-height: 1.8; }
+#track-list { display:flex; flex-direction:column; gap:5px; margin-top:4px; }
+.track-btn { display:flex; align-items:center; gap:10px; background:#14102a; border:1px solid #2e2458; color:#b0a8d8; padding:8px 12px; border-radius:4px; cursor:pointer; text-align:left; font-family:inherit; width:100%; transition:background .15s,border-color .15s; }
+.track-btn:hover { background:#1e1840; border-color:#5040a0; }
+.track-btn.active { background:#201860; border-color:#a080ff; color:#fff; }
+.track-num { font-size:14px; font-weight:bold; color:#8060c8; min-width:18px; }
+.track-info { line-height:1.5; }
+.track-info b { font-size:10px; color:#d0c8f8; }
+.track-info small { display:block; color:#6858a8; font-size:9px; }
+
+/* Name entry screen */
+#name-screen {
+  position:fixed; inset:0; background:#0a0818;
+  display:flex; align-items:center; justify-content:center;
+  z-index:9999; flex-direction:column; gap:18px;
+}
+#name-screen h1 {
+  font-family:'Courier New',monospace; color:#d0c8f8;
+  font-size:28px; letter-spacing:4px; text-transform:uppercase;
+  text-shadow:0 0 18px #7050e0; margin:0;
+}
+#name-screen .subtitle {
+  font-family:'Courier New',monospace; color:#6858a8;
+  font-size:11px; letter-spacing:2px; margin-top:-10px;
+}
+#name-screen label {
+  font-family:'Courier New',monospace; color:#a090d0;
+  font-size:12px; letter-spacing:2px; text-transform:uppercase;
+}
+#name-input {
+  background:#14102a; border:2px solid #5040a0; color:#fff;
+  font-family:'Courier New',monospace; font-size:16px; letter-spacing:3px;
+  padding:10px 16px; width:220px; text-align:center; outline:none;
+  border-radius:4px;
+}
+#name-input:focus { border-color:#a080ff; box-shadow:0 0 10px #5030c080; }
+#name-start-btn {
+  background:#2a1e60; border:2px solid #7050d0; color:#d0c8f8;
+  font-family:'Courier New',monospace; font-size:13px; letter-spacing:3px;
+  padding:10px 32px; cursor:pointer; border-radius:4px; text-transform:uppercase;
+  transition:background .15s, border-color .15s;
+}
+#name-start-btn:hover { background:#3a2a80; border-color:#b090ff; color:#fff; }
+#name-start-btn:disabled { opacity:.4; cursor:default; }
 </style>
 </head>
 <body>
+<div id="name-screen">
+  <h1>Minsky's Quest</h1>
+  <div class="subtitle">A Pixel Adventure</div>
+  <label for="name-input">Enter your name</label>
+  <input id="name-input" type="text" maxlength="16" placeholder="Hero" autocomplete="off" spellcheck="false">
+  <button id="name-start-btn" disabled onclick="startGame()">Begin Quest</button>
+</div>
+
 <canvas id="game"></canvas>
 
 <!-- Settings button -->
@@ -188,7 +239,9 @@ input[type=range].music-slider::-webkit-slider-thumb {
           <div class="controls-section-title">Movement</div>
           <div class="controls-grid">
             <span class="key-badge">← → / A D</span><span class="key-desc">Walk left / right</span>
-            <span class="key-badge">↑ ↓ / W S</span><span class="key-desc">Climb ladder / rope up or down</span>
+            <span class="key-badge">↑ / W</span><span class="key-desc">Climb ladder / rope up &amp; jump off</span>
+            <span class="key-badge">↓ / S</span><span class="key-desc">Climb down ladder / rope</span>
+            <span class="key-badge">Space</span><span class="key-desc">Jump</span>
           </div>
         </div>
         <div class="controls-section">
@@ -200,7 +253,9 @@ input[type=range].music-slider::-webkit-slider-thumb {
         <div class="controls-section">
           <div class="controls-section-title">Interaction</div>
           <div class="controls-grid">
-            <span class="key-badge">E</span><span class="key-desc">Talk to NPC / open chest / enter building / respawn</span>
+            <span class="key-badge">E / Space</span><span class="key-desc">Talk to NPC / open chest / confirm dialogue</span>
+            <span class="key-badge">E</span><span class="key-desc">Respawn after death</span>
+            <span class="key-badge">Right click</span><span class="key-desc">Enter a door (stand close to it first)</span>
             <span class="key-badge">P</span><span class="key-desc">Use health potion (restores 2 HP)</span>
           </div>
         </div>
@@ -208,7 +263,8 @@ input[type=range].music-slider::-webkit-slider-thumb {
           <div class="controls-section-title">Menus</div>
           <div class="controls-grid">
             <span class="key-badge">I</span><span class="key-desc">Open / close inventory</span>
-            <span class="key-badge">ESC</span><span class="key-desc">Close menu / open settings</span>
+            <span class="key-badge">ESC</span><span class="key-desc">Open settings / close any menu</span>
+            <span class="key-badge">M</span><span class="key-desc">Mute / unmute music</span>
             <span class="key-badge">F</span><span class="key-desc">Toggle fullscreen</span>
           </div>
         </div>
@@ -238,13 +294,30 @@ input[type=range].music-slider::-webkit-slider-thumb {
           </div>
         </div>
         <div class="controls-section">
-          <div class="controls-section-title">Track Info</div>
-          <div class="music-note">
-            🎵 Fantasy Theme — D Dorian<br>
-            Tempo: 80 BPM · 8-bar loop<br>
-            Instruments: flute · bass · harmony pad<br><br>
-            Press <span style="color:#c0a0f8">M</span> anytime to mute / unmute.
+          <div class="controls-section-title">Select Track</div>
+          <div id="track-list">
+            <button class="track-btn active" onclick="switchTrack(0)">
+              <span class="track-num">1</span>
+              <span class="track-info"><b>Fantasy Theme</b><small>D Dorian · 80 BPM · flute &amp; bass</small></span>
+            </button>
+            <button class="track-btn" onclick="switchTrack(1)">
+              <span class="track-num">2</span>
+              <span class="track-info"><b>Desert Winds</b><small>E Phrygian · 72 BPM · exotic &amp; airy</small></span>
+            </button>
+            <button class="track-btn" onclick="switchTrack(2)">
+              <span class="track-num">3</span>
+              <span class="track-info"><b>Battle March</b><small>A Minor · 110 BPM · drums &amp; brass</small></span>
+            </button>
+            <button class="track-btn" onclick="switchTrack(3)">
+              <span class="track-num">4</span>
+              <span class="track-info"><b>Town Festival</b><small>G Major · 96 BPM · lively &amp; bright</small></span>
+            </button>
+            <button class="track-btn" onclick="switchTrack(4)">
+              <span class="track-num">5</span>
+              <span class="track-info"><b>Dungeon Deep</b><small>D Minor · 60 BPM · dark &amp; tense</small></span>
+            </button>
           </div>
+          <div style="color:#5040a0;font-size:9px;margin-top:8px">Press <span style="color:#c0a0f8">M</span> anytime to mute / unmute.</div>
         </div>
       </div>
 
@@ -319,37 +392,43 @@ const SCREENS = [];
 SCREENS[0] = {
   name: 'Green Valley Village', biome: 'town',
   map: makeMap([
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,13,13,13,13,0,0,0,0,13,13,13,13,0,0,13,13,13,0],
-    [0,0,13,0,0,13,0,0,0,0,13,0,0,13,0,0,13,0,0,13],
-    [0,0,13,0,0,13,0,0,0,0,13,6,0,13,0,0,13,6,0,13],
-    [1,1,6,1,1,6,1,1,1,1,1,1,1,6,1,1,1,1,1,1],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
-    [1,1,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,1,1,1],
-    [0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
-    [0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,0],
-    [0,0,0,2,0,2,0,0,0,0,0,0,0,0,2,0,2,0,0,0],
-    [1,1,1,2,1,2,1,1,1,1,1,1,1,1,2,1,2,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],              // row 0
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],              // row 1
+    [13,0,13,13,13,0,0,0,0,13,13,13,0,0,0,13,13,13,0,0],      // row 2 – arch rooftops
+    [13,0,13,6,13,0,0,0,0,13,6,13,0,0,0,13,6,13,0,0],         // row 3 – door top half
+    [13,0,0,6,0,0,0,0,0,0,6,0,0,0,0,0,6,0,0,0],              // row 4 – door bottom half
+    [13,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1],              // row 5 – main street
+    [13,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0],              // row 6
+    [13,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,2,0,0],              // row 7 – ladder tops
+    [13,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,2,1,1],              // row 8 – mid platform
+    [13,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,2,0,0],              // row 9
+    [13,0,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,2,0,0],              // row 10
+    [13,0,0,0,0,2,4,0,0,0,0,0,2,0,4,0,0,2,0,0],              // row 11 – chests
+    [13,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,2,1,1],              // row 12 – lower platform
+    [13,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],              // row 13 – bedrock
   ]),
-  coins: [{x:6,y:4,id:'c0_1',value:2},{x:14,y:4,id:'c0_2',value:2},{x:10,y:7,id:'c0_3',value:3},{x:4,y:11,id:'c0_4',value:1},{x:16,y:11,id:'c0_5',value:1}],
+  coins: [
+    {x:6,y:4,id:'c0_1',value:2},
+    {x:13,y:4,id:'c0_2',value:2},
+    {x:7,y:7,id:'c0_3',value:3},
+    {x:15,y:7,id:'c0_4',value:3},
+    {x:3,y:11,id:'c0_5',value:2},
+    {x:18,y:11,id:'c0_6',value:2},
+  ],
   exits: [
-    { tx:19, ty:5, target:1, sx:1, sy:5 },   // right → Forest Edge
-    { tx:19, ty:6, target:1, sx:1, sy:6 },
-    { tx:0,  ty:5, target:1, sx:15, sy:5 },  // placeholder left loops back
-    { tx:0,  ty:6, target:1, sx:15, sy:6 },
+    { tx:19, ty:5,  target:1,  sx:1,  sy:5 },
+    { tx:19, ty:6,  target:1,  sx:1,  sy:6 },
+    { tx:19, ty:11, target:1,  sx:1,  sy:11 },
+    { tx:3,  ty:4,  target:18, sx:14, sy:11, door:true },  // Blacksmith's door
+    { tx:10, ty:4, target:19, sx:14, sy:11, door:true },  // Mayor's Hall door
+    { tx:16, ty:4, target:20, sx:14, sy:11, door:true },  // Inn door
   ],
   npcs: [
-    { x:3, y:4, id:'blacksmith', name:'Aldric the Blacksmith', dialogue:['Welcome, traveler!','I can give you a sword.','Take it — you will need it on your journey.'], givesItem:'Iron Sword' },
-    { x:12, y:4, id:'townhall',  name:'Mayor Britta', dialogue:['Four ancient seals were stolen!','Find them: Ancient Map, Desert Key, Mountain Gem, Temple Seal.','Bring them to the Altar in the Final Chamber. Good luck!'] },
-    { x:17, y:4, id:'hotel',     name:'Innkeeper', dialogue:['Welcome to the Green Hearth Inn!','Rest here to restore your health.'], heals:true },
-    { x:7,  y:7, id:'shop',      name:'Merchant', dialogue:['Buy: Health Potion (5g), Torch (3g)'], isShop:true },
+    { x:14, y:7, id:'shop', name:'Merchant', dialogue:['Buy: Health Potion (5g), Torch (3g)'], isShop:true },
   ],
   chests: [
-    { x:8, y:4, id:'town_gold1', item:'Gold Coin (5)', desc:'A small pouch of gold.' },
-    { x:9, y:11, id:'town_potion1', item:'Health Potion', desc:'Restores 2 HP.' },
+    { x:6,  y:11, id:'town_gold1',   item:'Gold Coin (5)', desc:'A small pouch of gold.' },
+    { x:14, y:11, id:'town_potion1', item:'Health Potion', desc:'Restores 2 HP.' },
   ],
   enemies: [],
 };
@@ -363,7 +442,7 @@ SCREENS[1] = {
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0],
     [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [1,1,6,1,1,1,2,1,1,1,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,2,1,1,1,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1,1,1,1,1],
     [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -375,10 +454,11 @@ SCREENS[1] = {
   ]),
   coins: [{x:3,y:11,id:'c1_1',value:2},{x:7,y:11,id:'c1_2',value:2},{x:13,y:11,id:'c1_3',value:2},{x:17,y:5,id:'c1_4',value:3}],
   exits: [
-    { tx:0, ty:5, target:0, sx:15, sy:5 },  // left → Town
-    { tx:0, ty:6, target:0, sx:15, sy:6 },
-    { tx:19, ty:6, target:2, sx:1, sy:6 },  // right → Deep Forest
-    { tx:19, ty:11, target:2, sx:1, sy:11 },
+    { tx:0,  ty:5,  target:0, sx:15, sy:5 },   // left → Green Valley Village
+    { tx:0,  ty:6,  target:0, sx:15, sy:6 },
+    { tx:0,  ty:11, target:0, sx:15, sy:11 },
+    { tx:19, ty:6,  target:2, sx:1,  sy:6 },   // right → Deep Forest
+    { tx:19, ty:11, target:2, sx:1,  sy:11 },
   ],
   npcs: [],
   chests: [
@@ -394,10 +474,10 @@ SCREENS[1] = {
 SCREENS[2] = {
   name: 'Deep Forest', biome: 'forest',
   map: makeMap([
-    [8,8,0,0,8,8,0,0,8,8,0,0,8,8,0,0,8,8,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0],
+    [8,8,0,0,1,8,0,0,8,8,0,0,8,8,0,0,8,8,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
+    [0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,1,2,0,0,0],  // col 16 ladder extends through platform
     [0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0],
     [0,0,0,0,2,0,0,1,1,1,1,0,0,0,0,0,2,0,0,0],
     [1,1,1,1,2,0,0,0,0,0,0,0,0,0,0,0,2,1,1,1],
@@ -411,10 +491,10 @@ SCREENS[2] = {
   ]),
   coins: [{x:2,y:11,id:'c2_1',value:2},{x:8,y:6,id:'c2_2',value:3},{x:14,y:11,id:'c2_3',value:2},{x:18,y:6,id:'c2_4',value:2}],
   exits: [
-    { tx:0, ty:6, target:1, sx:18, sy:6 },
-    { tx:0, ty:11, target:1, sx:18, sy:11 },
-    { tx:19, ty:6, target:3, sx:1, sy:6 },
-    { tx:19, ty:11, target:3, sx:1, sy:11 },
+    { tx:0,  ty:6,  target:1, sx:18, sy:6 },
+    { tx:0,  ty:11, target:1, sx:18, sy:11 },
+    { tx:19, ty:6,  target:3, sx:1,  sy:6 },
+    { tx:19, ty:11, target:3, sx:1,  sy:11 },
   ],
   npcs: [],
   chests: [{ x:9, y:8, id:'ancient_map', item:'Ancient Map', desc:'A map showing the way through the desert to the buried temple.' }],
@@ -484,10 +564,10 @@ SCREENS[4] = {
   ]),
   coins: [{x:2,y:11,id:'c4_1',value:2},{x:8,y:7,id:'c4_2',value:3},{x:15,y:11,id:'c4_3',value:2}],
   exits: [
-    { tx:0, ty:7, target:3, sx:18, sy:7 },
-    { tx:0, ty:11, target:3, sx:18, sy:11 },
-    { tx:19, ty:7, target:5, sx:1, sy:7 },
-    { tx:19, ty:11, target:5, sx:1, sy:11 },
+    { tx:0,  ty:7,  target:3, sx:18, sy:7 },
+    { tx:0,  ty:11, target:3, sx:18, sy:11 },
+    { tx:19, ty:7,  target:5, sx:1,  sy:7 },
+    { tx:19, ty:11, target:5, sx:1,  sy:11 },
   ],
   npcs: [],
   chests: [
@@ -580,8 +660,8 @@ SCREENS[7] = {
     [0,0,0,0,0,0,0,0,14,14,14,0,0,0,0,0,0,0,0,0],
     [0,0,13,13,13,13,0,0,14,14,14,0,13,13,13,13,0,0,0,0],
     [0,0,13,0,0,13,0,0,0,0,0,0,13,0,0,13,0,0,0,0],
-    [0,0,13,0,0,13,0,0,0,0,0,0,13,6,0,13,0,0,0,0],
-    [1,1,6,1,1,6,1,1,1,1,1,1,1,1,1,6,1,1,1,1],
+    [0,0,13,0,0,13,0,0,0,0,0,0,13,0,0,13,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,2,0,0,0,0],
     [1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1],
@@ -877,7 +957,7 @@ SCREENS[15] = {
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,13,13,13,13,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,13,0,0,13,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,13,6,0,13,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,13,0,0,13,0,0,0,0,0,0,0,0],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -975,6 +1055,90 @@ SCREENS[17] = {
   altar: { x:9, y:6 },
 };
 
+// ── Screen 18: Blacksmith's Forge ───────────────────────────────────────────
+SCREENS[18] = {
+  name: "Blacksmith's Forge", biome: 'town',
+  map: makeMap([
+    [13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,13],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  coins: [],
+  exits: [{ tx:16, ty:11, target:0, sx:6, sy:4, door:true }],
+  npcs: [
+    { x:12, y:11, id:'blacksmith', name:'Aldric the Blacksmith', dialogue:['Welcome to my forge!','I can give you a sword.','Take it — you will need it on your journey.'], givesItem:'Iron Sword' },
+  ],
+  chests: [{ x:3, y:10, id:'forge_gold', item:'Gold Coin (5)', desc:'Payment for commissions.' }],
+  enemies: [],
+};
+
+// ── Screen 19: Mayor's Hall ──────────────────────────────────────────────────
+SCREENS[19] = {
+  name: "Mayor's Hall", biome: 'town',
+  map: makeMap([
+    [13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,13],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  coins: [{x:5,y:11,id:'hall_c1',value:3},{x:14,y:11,id:'hall_c2',value:3}],
+  exits: [{ tx:16, ty:11, target:0, sx:12, sy:4, door:true }],
+  npcs: [
+    { x:10, y:11, id:'townhall', name:'Mayor Britta', dialogue:['Four ancient seals were stolen!','Find them: Ancient Map, Desert Key, Mountain Gem, Temple Seal.','Bring them to the Altar in the Final Chamber. Good luck!'] },
+  ],
+  chests: [],
+  enemies: [],
+};
+
+// ── Screen 20: The Green Hearth Inn ─────────────────────────────────────────
+SCREENS[20] = {
+  name: 'The Green Hearth Inn', biome: 'town',
+  map: makeMap([
+    [13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13],
+    [13,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,13],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ]),
+  coins: [{x:8,y:11,id:'inn_c1',value:2}],
+  exits: [{ tx:16, ty:11, target:0, sx:18, sy:4, door:true }],
+  npcs: [
+    { x:12, y:11, id:'hotel', name:'Innkeeper', dialogue:['Welcome to the Green Hearth Inn!','Rest here to restore your health.'], heals:true },
+  ],
+  chests: [{ x:3, y:10, id:'inn_potion', item:'Health Potion', desc:'Restores 2 HP.' }],
+  enemies: [],
+};
+
 // ─── PLAYER STATE ────────────────────────────────────────────────────────────
 const player = {
   x: 2, y: 10, // tile position (can be fractional during movement)
@@ -1017,6 +1181,34 @@ const openedChests = new Set();
 const openedNpcs = new Set(); // npcs that gave their item
 const collectedCoins = new Set();
 
+// ─── COIN PARTICLES ──────────────────────────────────────────────────────────
+let coinParticles = []; // {x,y,vx,vy,life,col}
+function spawnCoinParticles(cx, cy){
+  const cols=['#FFD860','#FFB830','#FFEC90','#F0C040','#FFFFFF'];
+  for(let i=0;i<8;i++){
+    const ang=Math.random()*Math.PI*2, spd=0.5+Math.random()*1.2;
+    coinParticles.push({
+      x:cx, y:cy,
+      vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd-1.5,
+      life:18+~~(Math.random()*12),
+      col:cols[i%cols.length]
+    });
+  }
+}
+function updateCoinParticles(){
+  coinParticles=coinParticles.filter(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.12; p.life--;
+    return p.life>0;
+  });
+}
+function drawCoinParticles(){
+  coinParticles.forEach(p=>{
+    oc.globalAlpha=p.life/30;
+    rect(~~p.x,~~p.y,2,2,p.col);
+    oc.globalAlpha=1;
+  });
+}
+
 // ─── GAME STATE ──────────────────────────────────────────────────────────────
 let gameState = 'title'; // 'title' | 'playing' | 'inventory' | 'dialogue' | 'shop' | 'win' | 'dead'
 let dialogueData = null; // { lines, index, npc }
@@ -1031,50 +1223,123 @@ window.addEventListener('keydown', e => {
   if (!keys[e.code]) justPressed[e.code] = true;
   keys[e.code] = true;
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-  startMusic();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
+function tryDoorExit() {
+  if (screenTransition) return;
+  const screen = SCREENS[player.currentScreen];
+  for (const exit of screen.exits) {
+    if (exit.door && Math.abs(exit.tx - player.x) < 1.5 && Math.abs(exit.ty - player.y) < 1.5) {
+      startTransition(exit.target, exit.sx, exit.sy);
+      return;
+    }
+  }
+}
+window.addEventListener('contextmenu', e => { e.preventDefault(); tryDoorExit(); });
+
 // ─── MUSIC ───────────────────────────────────────────────────────────────────
-let audioCtx=null, masterGain=null, musicStarted=false, musicMuted=false;
+let audioCtx=null, masterGain=null, musicStarted=false, musicMuted=false, activeOscs=[];
 
 // Frequencies
 const _D3=146.83,_E3=164.81,_F3=174.61,_G3=196.00,_A3=220.00,_B3=246.94,
       _C4=261.63,_D4=293.66,_E4=329.63,_F4=349.23,_G4=392.00,_A4=440.00,
       _B4=493.88,_C5=523.25,_D5=587.33,_E5=659.26;
 
-// Fantasy melody in D Dorian — 32 beats @ 80 BPM (Q=0.75s)
 // [freq, startBeat, durBeats, waveform, vol]
-const MUSIC_SCORE=[
-  // ── Melody (flute: triangle) ──
-  // Bar 1-2: Dm
-  [_D4,0,.9,'triangle',.42],[_F4,1,.9,'triangle',.42],[_A4,2,.9,'triangle',.44],[_D5,3,.9,'triangle',.48],
-  [_A4,4,.9,'triangle',.42],[_G4,5,.9,'triangle',.38],[_F4,6,.9,'triangle',.38],[_E4,7,1.8,'triangle',.38],
-  // Bar 3-4: C → C
-  [_E4,8,.9,'triangle',.42],[_G4,9,.9,'triangle',.42],[_C5,10,.9,'triangle',.44],[_G4,11,.9,'triangle',.38],
-  [_E4,12,.9,'triangle',.38],[_D4,13,.9,'triangle',.38],[_C4,14,.9,'triangle',.38],[_E4,15,1.8,'triangle',.38],
-  // Bar 5-6: F → F
-  [_F4,16,.9,'triangle',.44],[_A4,17,.9,'triangle',.44],[_C5,18,1.8,'triangle',.48],
-  [_A4,20,.9,'triangle',.38],[_F4,21,.9,'triangle',.38],[_E4,22,.9,'triangle',.36],[_D4,23,1.8,'triangle',.38],
-  // Bar 7-8: Am → G
-  [_E4,24,.9,'triangle',.42],[_A4,25,.9,'triangle',.44],[_B4,26,.9,'triangle',.48],[_A4,27,.9,'triangle',.38],
-  [_G4,28,.9,'triangle',.42],[_F4,29,.9,'triangle',.38],[_E4,30,.9,'triangle',.36],[_D4,31,1.8,'triangle',.48],
-
-  // ── Bass (sine) ──
-  [_D3,0,3.5,'sine',.52],[_D3,4,3.5,'sine',.48],
-  [_C4,8,3.5,'sine',.48],[_C4,12,3.5,'sine',.45],
-  [_F3,16,3.5,'sine',.52],[_F3,20,3.5,'sine',.48],
-  [_A3,24,3.5,'sine',.48],[_G3,28,3.5,'sine',.48],
-
-  // ── Harmony pads (sine, low vol) ──
-  [_D4,0,7,'sine',.10],[_F4,0,7,'sine',.08],[_A4,0,7,'sine',.06],
-  [_C4,8,7,'sine',.10],[_E4,8,7,'sine',.08],[_G4,8,7,'sine',.06],
-  [_F4,16,7,'sine',.10],[_A4,16,7,'sine',.08],[_C5,16,7,'sine',.06],
-  [_A3,24,3.5,'sine',.10],[_C4,24,3.5,'sine',.08],[_E4,24,3.5,'sine',.06],
-  [_G3,28,3.5,'sine',.10],[_B3,28,3.5,'sine',.08],[_D4,28,3.5,'sine',.06],
+const MUSIC_TRACKS=[
+  { name:'Fantasy Theme', bpm:80, beats:32, notes:[
+    // Melody (triangle)
+    [_D4,0,.9,'triangle',.42],[_F4,1,.9,'triangle',.42],[_A4,2,.9,'triangle',.44],[_D5,3,.9,'triangle',.48],
+    [_A4,4,.9,'triangle',.42],[_G4,5,.9,'triangle',.38],[_F4,6,.9,'triangle',.38],[_E4,7,1.8,'triangle',.38],
+    [_E4,8,.9,'triangle',.42],[_G4,9,.9,'triangle',.42],[_C5,10,.9,'triangle',.44],[_G4,11,.9,'triangle',.38],
+    [_E4,12,.9,'triangle',.38],[_D4,13,.9,'triangle',.38],[_C4,14,.9,'triangle',.38],[_E4,15,1.8,'triangle',.38],
+    [_F4,16,.9,'triangle',.44],[_A4,17,.9,'triangle',.44],[_C5,18,1.8,'triangle',.48],
+    [_A4,20,.9,'triangle',.38],[_F4,21,.9,'triangle',.38],[_E4,22,.9,'triangle',.36],[_D4,23,1.8,'triangle',.38],
+    [_E4,24,.9,'triangle',.42],[_A4,25,.9,'triangle',.44],[_B4,26,.9,'triangle',.48],[_A4,27,.9,'triangle',.38],
+    [_G4,28,.9,'triangle',.42],[_F4,29,.9,'triangle',.38],[_E4,30,.9,'triangle',.36],[_D4,31,1.8,'triangle',.48],
+    // Bass (sine)
+    [_D3,0,3.5,'sine',.52],[_D3,4,3.5,'sine',.48],
+    [_C4,8,3.5,'sine',.48],[_C4,12,3.5,'sine',.45],
+    [_F3,16,3.5,'sine',.52],[_F3,20,3.5,'sine',.48],
+    [_A3,24,3.5,'sine',.48],[_G3,28,3.5,'sine',.48],
+    // Pads
+    [_D4,0,7,'sine',.10],[_F4,0,7,'sine',.08],[_A4,0,7,'sine',.06],
+    [_C4,8,7,'sine',.10],[_E4,8,7,'sine',.08],[_G4,8,7,'sine',.06],
+    [_F4,16,7,'sine',.10],[_A4,16,7,'sine',.08],[_C5,16,7,'sine',.06],
+    [_A3,24,3.5,'sine',.10],[_C4,24,3.5,'sine',.08],[_E4,24,3.5,'sine',.06],
+    [_G3,28,3.5,'sine',.10],[_B3,28,3.5,'sine',.08],[_D4,28,3.5,'sine',.06],
+  ]},
+  { name:'Desert Winds', bpm:72, beats:32, notes:[
+    // E Phrygian melody (triangle) — descending, exotic feel
+    [_E4,0,.9,'triangle',.40],[_F4,1,.9,'triangle',.44],[_G4,2,.9,'triangle',.42],[_E4,3,1.8,'triangle',.38],
+    [_D4,5,.9,'triangle',.40],[_C4,6,.9,'triangle',.38],[_B3,7,1.8,'triangle',.36],
+    [_E4,9,.9,'triangle',.40],[_F4,10,.9,'triangle',.44],[_A4,11,.9,'triangle',.46],[_G4,12,.9,'triangle',.38],
+    [_F4,13,.9,'triangle',.36],[_E4,14,.9,'triangle',.36],[_D4,15,1.8,'triangle',.34],
+    [_G4,17,.9,'triangle',.42],[_F4,18,.9,'triangle',.40],[_E4,19,1.8,'triangle',.44],
+    [_D4,21,.9,'triangle',.38],[_C4,22,.9,'triangle',.36],[_B3,23,1.8,'triangle',.34],
+    [_E4,25,.9,'triangle',.42],[_G4,26,.9,'triangle',.44],[_F4,27,.9,'triangle',.40],[_E4,28,.9,'triangle',.38],
+    [_D4,29,.9,'triangle',.36],[_C4,30,.9,'triangle',.34],[_B3,31,1.8,'triangle',.38],
+    // Bass drone (sine)
+    [_E3,0,7.5,'sine',.48],[_E3,8,7.5,'sine',.44],[_E3,16,7.5,'sine',.48],[_E3,24,7.5,'sine',.44],
+    // High shimmer (sine)
+    [_B4,0,15,'sine',.06],[_A4,16,15,'sine',.06],
+  ]},
+  { name:'Battle March', bpm:110, beats:32, notes:[
+    // A minor melody (sawtooth — brass feel)
+    [_A4,0,.8,'sawtooth',.28],[_A4,1,.8,'sawtooth',.26],[_C5,2,.8,'sawtooth',.30],[_E5,3,1.6,'sawtooth',.32],
+    [_D5,5,.8,'sawtooth',.28],[_C5,6,.8,'sawtooth',.26],[_B4,7,1.6,'sawtooth',.28],
+    [_A4,9,.8,'sawtooth',.28],[_G4,10,.8,'sawtooth',.26],[_F4,11,.8,'sawtooth',.28],[_E4,12,1.6,'sawtooth',.30],
+    [_F4,14,.8,'sawtooth',.28],[_G4,15,1.6,'sawtooth',.26],
+    [_A4,17,.8,'sawtooth',.30],[_B4,18,.8,'sawtooth',.28],[_C5,19,1.6,'sawtooth',.32],
+    [_E5,21,.8,'sawtooth',.34],[_D5,22,.8,'sawtooth',.28],[_C5,23,1.6,'sawtooth',.26],
+    [_B4,25,.8,'sawtooth',.28],[_A4,26,.8,'sawtooth',.30],[_G4,27,.8,'sawtooth',.26],[_A4,28,3.5,'sawtooth',.32],
+    // Driving bass (square — drums-like pulse)
+    [_A3,0,.4,'square',.36],[_A3,1,.4,'square',.30],[_A3,2,.4,'square',.36],[_A3,3,.4,'square',.30],
+    [_A3,4,.4,'square',.36],[_A3,5,.4,'square',.30],[_A3,6,.4,'square',.36],[_A3,7,.4,'square',.30],
+    [_E3,8,.4,'square',.36],[_E3,9,.4,'square',.30],[_E3,10,.4,'square',.36],[_E3,11,.4,'square',.30],
+    [_E3,12,.4,'square',.36],[_E3,13,.4,'square',.30],[_E3,14,.4,'square',.36],[_E3,15,.4,'square',.30],
+    [_F3,16,.4,'square',.36],[_F3,17,.4,'square',.30],[_F3,18,.4,'square',.36],[_F3,19,.4,'square',.30],
+    [_F3,20,.4,'square',.36],[_F3,21,.4,'square',.30],[_F3,22,.4,'square',.36],[_F3,23,.4,'square',.30],
+    [_A3,24,.4,'square',.36],[_A3,25,.4,'square',.30],[_A3,26,.4,'square',.36],[_A3,27,.4,'square',.30],
+    [_A3,28,.4,'square',.36],[_A3,29,.4,'square',.30],[_A3,30,.4,'square',.36],[_A3,31,.4,'square',.30],
+  ]},
+  { name:'Town Festival', bpm:96, beats:32, notes:[
+    // G major melody (triangle — lively)
+    [_G4,0,.8,'triangle',.44],[_A4,1,.8,'triangle',.42],[_B4,2,.8,'triangle',.46],[_D5,3,1.6,'triangle',.48],
+    [_C5,5,.8,'triangle',.44],[_B4,6,.8,'triangle',.42],[_A4,7,1.6,'triangle',.40],
+    [_G4,9,.8,'triangle',.44],[_B4,10,.8,'triangle',.46],[_D5,11,1.6,'triangle',.48],
+    [_C5,13,.8,'triangle',.44],[_A4,14,.8,'triangle',.42],[_G4,15,1.6,'triangle',.44],
+    [_D5,17,.8,'triangle',.48],[_C5,18,.8,'triangle',.46],[_B4,19,.8,'triangle',.44],[_A4,20,1.6,'triangle',.42],
+    [_G4,22,.8,'triangle',.44],[_A4,23,.8,'triangle',.42],[_B4,24,.8,'triangle',.46],[_D5,25,1.6,'triangle',.48],
+    [_C5,27,.8,'triangle',.44],[_B4,28,.8,'triangle',.42],[_A4,29,.8,'triangle',.40],[_G4,30,1.6,'triangle',.46],
+    // Walking bass (sine)
+    [_G3,0,1.8,'sine',.50],[_B3,2,1.8,'sine',.46],[_D3,4,1.8,'sine',.48],[_C4,6,1.8,'sine',.46],
+    [_G3,8,1.8,'sine',.50],[_B3,10,1.8,'sine',.46],[_D3,12,1.8,'sine',.48],[_G3,14,1.8,'sine',.46],
+    [_D4,16,1.8,'sine',.50],[_C4,18,1.8,'sine',.46],[_B3,20,1.8,'sine',.48],[_A3,22,1.8,'sine',.46],
+    [_G3,24,1.8,'sine',.50],[_B3,26,1.8,'sine',.46],[_D4,28,1.8,'sine',.48],[_G3,30,1.8,'sine',.50],
+    // Staccato harmony (triangle, quiet)
+    [_D4,0,3.5,'sine',.08],[_G4,0,3.5,'sine',.06],
+    [_C4,8,3.5,'sine',.08],[_E4,8,3.5,'sine',.06],
+    [_D4,16,3.5,'sine',.08],[_F4,16,3.5,'sine',.06],
+    [_G3,24,3.5,'sine',.08],[_B3,24,3.5,'sine',.06],
+  ]},
+  { name:'Dungeon Deep', bpm:60, beats:32, notes:[
+    // D minor pentatonic melody (triangle — slow, eerie)
+    [_D4,0,1.8,'triangle',.36],[_F4,2,1.8,'triangle',.38],[_A4,4,1.8,'triangle',.40],[_C5,6,3.5,'triangle',.36],
+    [_A4,10,1.8,'triangle',.36],[_G4,12,1.8,'triangle',.34],[_F4,14,3.5,'triangle',.36],
+    [_D4,18,1.8,'triangle',.36],[_F4,20,1.8,'triangle',.38],[_G4,22,1.8,'triangle',.36],[_F4,24,1.8,'triangle',.34],
+    [_D4,26,1.8,'triangle',.36],[_C4,28,3.5,'triangle',.34],
+    // Heavy bass (sine, low)
+    [_D3,0,7,'sine',.58],[_A3,8,7,'sine',.54],[_F3,16,7,'sine',.56],[_G3,24,7,'sine',.54],
+    // Pulse drone (sine, very low)
+    [_D3,0,31,'sine',.12],
+    // Tension accent (sawtooth, quiet)
+    [_D4,0,1,'sawtooth',.10],[_D4,8,1,'sawtooth',.10],[_D4,16,1,'sawtooth',.10],[_D4,24,1,'sawtooth',.10],
+  ]},
 ];
 
-const MUSIC_BEATS=32, MUSIC_BPM=80, MUSIC_Q=60/MUSIC_BPM;
+let currentTrackIdx=0, musicTimer=null;
 
 function playMusicNote(freq, startTime, dur, type, vol){
   if(!audioCtx||!freq) return;
@@ -1086,15 +1351,33 @@ function playMusicNote(freq, startTime, dur, type, vol){
   g.gain.exponentialRampToValueAtTime(0.001,startTime+dur*0.92);
   osc.connect(g); g.connect(masterGain);
   osc.start(startTime); osc.stop(startTime+dur);
+  activeOscs.push(osc);
+  osc.onended=()=>{ const i=activeOscs.indexOf(osc); if(i>=0) activeOscs.splice(i,1); };
 }
 
-function scheduleMusic(loopStart){
+function stopAllNotes(){
+  activeOscs.forEach(o=>{ try{ o.stop(); }catch(e){} });
+  activeOscs=[];
+}
+
+function scheduleMusic(loopStart, trackIdx){
   if(!audioCtx||musicMuted) return;
-  MUSIC_SCORE.forEach(([freq,beat,dur,type,vol])=>{
-    playMusicNote(freq, loopStart+beat*MUSIC_Q, dur*MUSIC_Q, type, vol);
+  if(trackIdx!==currentTrackIdx) return;
+  const track=MUSIC_TRACKS[trackIdx];
+  const Q=60/track.bpm;
+  track.notes.forEach(([freq,beat,dur,type,vol])=>{
+    playMusicNote(freq, loopStart+beat*Q, dur*Q, type, vol);
   });
-  const loopLen=MUSIC_BEATS*MUSIC_Q;
-  setTimeout(()=>scheduleMusic(loopStart+loopLen), (loopLen-1)*1000);
+  const loopLen=track.beats*Q;
+  musicTimer=setTimeout(()=>scheduleMusic(loopStart+loopLen, trackIdx), (loopLen-1)*1000);
+}
+
+function switchTrack(i){
+  currentTrackIdx=i;
+  if(musicTimer){ clearTimeout(musicTimer); musicTimer=null; }
+  stopAllNotes();
+  document.querySelectorAll('.track-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+  if(audioCtx&&!musicMuted) scheduleMusic(audioCtx.currentTime+0.05, i);
 }
 
 function startMusic(){
@@ -1110,13 +1393,17 @@ function startMusic(){
     dly.delayTime.value=0.35; dlyG.gain.value=0.18;
     masterGain.connect(dly); dly.connect(dlyG); dlyG.connect(audioCtx.destination);
     masterGain.connect(audioCtx.destination);
-    scheduleMusic(audioCtx.currentTime+0.1);
+    scheduleMusic(audioCtx.currentTime+0.1, currentTrackIdx);
   }catch(e){}
 }
 
 function toggleMusic(){
   musicMuted=!musicMuted;
-  if(masterGain) masterGain.gain.value=musicMuted?0:0.22;
+  if(masterGain){
+    const vol=document.getElementById('music-vol');
+    masterGain.gain.value=musicMuted?0:(vol?vol.value/100*0.36:0.22);
+  }
+  if(!musicMuted&&audioCtx) scheduleMusic(audioCtx.currentTime+0.05, currentTrackIdx);
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -1136,7 +1423,7 @@ function tryExit() {
   const tx = Math.round(player.x), ty = Math.round(player.y);
   const screen = SCREENS[player.currentScreen];
   for (const exit of screen.exits) {
-    if (exit.tx === tx && exit.ty === ty) {
+    if (exit.tx === tx && exit.ty === ty && !exit.door) {
       startTransition(exit.target, exit.sx, exit.sy);
       return;
     }
@@ -1167,7 +1454,7 @@ function doTransition(target, sx, sy) {
   player.x = sx;
   player.vx = 0; player.vy = 0;
   initEnemies(target);
-  // Snap player to the platform surface nearest to sy, checking nearby columns as fallback
+  // Snap player to the nearest platform at or below sy (never above), so players fall to ground
   let snapY = sy;
   let bestDist = Infinity;
   const col = Math.round(sx);
@@ -1175,6 +1462,7 @@ function doTransition(target, sx, sy) {
     for (const c of [col + dc, col - dc]) {
       if (c < 0 || c >= COLS) continue;
       for (let t = 0; t < ROWS - 1; t++) {
+        if (t < sy - 1) continue; // allow one row above sy (player stands on top of the platform tile)
         if (!isSolid(getTile(c, t)) && isSolid(getTile(c, t + 1))) {
           const dist = Math.abs(t - sy) + dc * 0.5;
           if (dist < bestDist) { bestDist = dist; snapY = t; }
@@ -1222,7 +1510,10 @@ function updatePlayer(dt) {
   // Vertical movement (ladders/ropes)
   if (player.onLadder || player.onRope) {
     player.vy = 0;
-    if (keys['ArrowUp'] || keys['KeyW']) player.vy = -LADDER_SPEED * dt;
+    if (keys['ArrowUp'] || keys['KeyW']) {
+      const ceilTile = getTile(Math.round(player.x), Math.floor(player.y) - 1);
+      if (!isSolid(ceilTile) || isLadder(ceilTile)) player.vy = -LADDER_SPEED * dt;
+    }
     if (keys['ArrowDown'] || keys['KeyS']) player.vy = LADDER_SPEED * dt;
   } else {
     // Jump
@@ -1296,7 +1587,7 @@ function updatePlayer(dt) {
   // Exit check on tile
   if (!screenTransition) {
     for (const exit of SCREENS[player.currentScreen].exits) {
-      if (Math.abs(player.x - exit.tx) < 0.6 && Math.abs(player.y - exit.ty) < 0.6) {
+      if (!exit.door && Math.abs(player.x - exit.tx) < 0.6 && Math.abs(player.y - exit.ty) < 0.6) {
         startTransition(exit.target, exit.sx, exit.sy);
         return;
       }
@@ -1312,6 +1603,7 @@ function updatePlayer(dt) {
         collectedCoins.add(coin.id);
         player.gold += coin.value;
         showPopup(`+${coin.value} Gold!`);
+        spawnCoinParticles(~~(coin.x*rTS)+8, ~~(coin.y*rTS)+10);
       }
     });
   }
@@ -1837,12 +2129,27 @@ function drawTile(tile,tx,ty,biome){
     case T.ROPE:    drawRope(x,y,p); break;
     case T.CHEST:   drawChest(x,y,false); break;
     case T.CHEST_OPEN: drawChest(x,y,true); break;
-    case T.DOOR:    drawDoor(x,y,biome,p); break;
+    case T.DOOR:    drawDoor(x,y); break;
     case T.WATER:   drawWater(x,y); break;
     case T.HAZARD:  drawHazard(x,y); break;
     case T.DECO:    drawDeco(x,y,biome,p); break;
     case T.ALTAR:   drawAltar(x,y); break;
   }
+}
+
+function drawDoor(x,y){
+  // Frame
+  rect(x,y,rTS,rTS,'#2C1A0E');
+  // Door body
+  rect(x+2,y+2,rTS-4,rTS-2,'#7A3E1E');
+  // Upper panel
+  rect(x+3,y+3,rTS-6,5,'#9B5128');
+  // Lower panel
+  rect(x+3,y+10,rTS-6,4,'#9B5128');
+  // Horizontal divider
+  rect(x+3,y+8,rTS-6,1,'#5A2C10');
+  // Knob
+  rect(x+rTS-5,y+8,2,2,'#D4A820');
 }
 
 function drawGround(x,y,biome,p,hasSurface){
@@ -2083,32 +2390,6 @@ function drawChest(x,y,open){
   }
 }
 
-function drawDoor(x,y,biome,p){
-  const dc=biome==='desert'?'#9B7030':biome==='ruins'?'#405060':'#7B4F1E';
-  const dh=shadeC(dc,30), dd=shadeC(dc,-20);
-  const fc=biome==='desert'?'#B89040':biome==='ruins'?'#607080':p.wall||'#4A3010';
-  // Frame
-  rect(x,y,16,16,fc);
-  rect(x+1,y,14,16,dc);
-  // Arch cutout top
-  for(let ax=0;ax<14;ax++){
-    const ah=~~(6*Math.sin(ax/13*Math.PI));
-    rect(x+1+ax,y,1,ah,fc);
-  }
-  // Door surface planks
-  for(let ply=7;ply<16;ply+=4){
-    rect(x+2,y+ply,12,1,dd);
-    rect(x+2,y+ply+1,12,2,shadeC(dc,8));
-    rect(x+2,y+ply+1,12,1,dh);
-  }
-  // Vertical center split
-  rect(x+8,y+6,1,10,dd);
-  // Hinges
-  rect(x+2,y+7,3,3,'#808080'); rect(x+2,y+7,3,1,'#A0A0A0');
-  rect(x+2,y+12,3,3,'#808080'); rect(x+2,y+12,3,1,'#A0A0A0');
-  // Doorknob
-  rect(x+10,y+9,3,3,'#F8D040'); rect(x+10,y+9,2,1,'#FFEC80');
-}
 
 function drawWater(x,y){
   const t=(tick>>2)%16;
@@ -2731,78 +3012,108 @@ function pixelTextWidth(text,scale=1){
 
 // ─── PLAYER SPRITE (Wizard) ───────────────────────────────────────────────────
 // ─── PLAYER SPRITE (Cloaked Figure) ──────────────────────────────────────────
+// ── Piskel-style pixel art palette — hero in deep purple/navy cloak ──
 const PLAYER_PAL={
-  K:'#1A3A22',k:'#0F2415',  // dark green cloak / deepest shadow
-  F:'#2E5A38',f:'#254C2E',  // mid-green fold / fold shadow
-  V:'#3E7048',              // lighter green highlight
+  K:'#1B1650',k:'#0E0D35',  // darkest cloak shadow / near black
+  C:'#2E28A0',c:'#231E80',  // main cloak / fold shadow
+  L:'#4A44D0',l:'#3A35B8',  // cloak highlight / lighter fold
+  V:'#6A65E8',              // brightest highlight edge
   H:'#F0C080',h:'#C08848',  // skin light / shadow
-  A:'#D4A820',a:'#8B6810',  // gold buckle light / shadow
+  A:'#D4A820',a:'#8B6810',  // gold belt light / dark
+  G:'#4A2E0C',g:'#2E1A06',  // dark brown boots
+  W:'#E8E8F8',              // white collar trim
   e:'#FFB830',E:'#FFD870',  // amber eye glow
   '.':null
 };
 
-// Idle — dark green hooded cloak, face peeks from shadow, gold belt
+// Idle — deep purple hooded cloak, white collar, gold belt, brown boots
 const PLAYER_ROWS=[
   '....KKKK....',  //  0  hood tip
-  '...KKKkKK...',  //  1  hood
-  '..KKKkKKKK..',  //  2  hood brim
-  '..KKhHHhKK..',  //  3  forehead — skin visible in shadow
-  '..KKeEheEK..',  //  4  amber eyes (cols 4-5 and 7-8 for glow)
-  '..KKhHHhKK..',  //  5  lower face
-  '..KKKkKKKK..',  //  6  collar
-  '.KKFfFFFKKK.',  //  7  shoulders
-  '.KKVFfFVKKK.',  //  8  upper chest — highlight fold
-  '.KKFAaAFKKK.',  //  9  belt — gold buckle centre
-  '.KKFFfFFKKK.',  // 10  lower body
-  '.KKKFfFKKK..',  // 11  cloak tapers
-  '..KKFfFKKK..',  // 12
-  '..KKFfFKK...',  // 13
-  '.KKKFfFKKK..',  // 14  cloak flares
-  'KKKKFfFKKKK.',  // 15  wide dramatic sweep
-  '.KKKFfFKKK..',  // 16
-  '..KKFfFKK...',  // 17
-  '..KKkFkKK...',  // 18  cloak hem
-  '...kKkKk....',  // 19  ground shadow
+  '...KKKkKK...',  //  1  hood back
+  '..KKCkCCKK..',  //  2  hood brim
+  '..KKhHHhKK..',  //  3  forehead
+  '..KKeEheEK..',  //  4  amber eyes
+  '..KKhHHhKK..',  //  5  lower face / chin
+  '..WWWWWWWW..',  //  6  white collar
+  '.KKCcCCCKKK.',  //  7  shoulders
+  '.KKLCcCLKKK.',  //  8  upper chest highlight
+  '.KKCAaACKKK.',  //  9  gold belt
+  '.KKCCcCCKKK.',  // 10  lower belly
+  '.KKKCcCKKK..',  // 11  robe tapers
+  '..KKCcCKKK..',  // 12
+  '..KKCcCKK...',  // 13
+  '.KKKCcCKKK..',  // 14  hem flares
+  'KKKKCcCKKKK.',  // 15  wide dramatic sweep
+  '.KKKCcCKKK..',  // 16
+  '..KKCcCKKK..',  // 17
+  '..GGkCkGGG..',  // 18  boots visible at hem
+  '..GgGgGgg...',  // 19  foot / ground
 ];
 
-// Walk variant — same shape, hem shifts dynamically in drawPlayer
-const PLAYER_WALK=[
+// Walk frame A — left foot stepping forward
+const PLAYER_WALK_A=[
   '....KKKK....',
   '...KKKkKK...',
-  '..KKKkKKKK..',
+  '..KKCkCCKK..',
   '..KKhHHhKK..',
   '..KKeEheEK..',
   '..KKhHHhKK..',
-  '..KKKkKKKK..',
-  '.KKFfFFFKKK.',
-  '.KKVFfFVKKK.',
-  '.KKFAaAFKKK.',
-  '.KKFFfFFKKK.',
-  '.KKKFfFKKK..',
-  '..KKFfFKKK..',
-  '..KKFfFKK...',
-  '.KKKFfFKKK..',
-  'KKKKFfFKKKK.',
-  '.KKKFfFKKK..',
-  '....KFfFK...',  // hem swings forward
-  '....KFkK....',
-  '....kKkK....',
+  '..WWWWWWWW..',
+  '.KKCcCCCKKK.',
+  '.KKLCcCLKKK.',
+  '.KKCAaACKKK.',
+  '.KKCCcCCKKK.',
+  '.KKKCcCKKK..',
+  '..KKCcCKKK..',
+  '..KKCcCKKK..',  // robe bunches forward
+  '.KKKCcCCKK..',
+  'KKKKCcCKKKK.',
+  '.KKKCcCKKK..',
+  '..KKGgCKK...',  // left boot forward
+  '..GGGgCKK...',
+  '.GGgGgkK....',  // left foot ahead, right foot behind
 ];
+
+// Walk frame B — right foot stepping forward
+const PLAYER_WALK_B=[
+  '....KKKK....',
+  '...KKKkKK...',
+  '..KKCkCCKK..',
+  '..KKhHHhKK..',
+  '..KKeEheEK..',
+  '..KKhHHhKK..',
+  '..WWWWWWWW..',
+  '.KKCcCCCKKK.',
+  '.KKLCcCLKKK.',
+  '.KKCAaACKKK.',
+  '.KKCCcCCKKK.',
+  '.KKKCcCKKK..',
+  '..KKCcCKKK..',
+  '..KKCcCKKK..',
+  '..KKCCcCKKK.',
+  '.KKKKCcCKKKK',
+  '.KKKKCcCKKK.',
+  '...KKCGgg...',  // right boot forward
+  '...KKCGGG...',
+  '....kKgGgGG.',  // right foot ahead, left behind
+];
+
+// Legacy alias (not used directly any more)
+const PLAYER_WALK=PLAYER_WALK_A;
 
 function drawPlayer(){
   if(player.invincible&&((tick>>2)&1)) return;
-  const px2=~~(player.x*rTS),py2=~~(player.y*rTS)-7;
+  const px2=~~(player.x*rTS),py2=~~(player.y*rTS)-2;
   const walking=player.onGround&&Math.abs(player.vx)>0.001;
   const fwd=player.facingRight;
-  const sway=walking?~~(3*Math.sin(tick*0.22)):0;
 
-  // Cloak hem sways — shift bottom rows sideways when walking
-  const frame=PLAYER_ROWS.map((row,i)=>{
-    if(i>=16 && walking && sway!==0){
-      return sway>0 ? '.'+row.slice(0,-1) : row.slice(1)+'.';
-    }
-    return row;
-  });
+  // 2-frame walk cycle with actual leg sprites
+  let frame;
+  if(walking){
+    frame = ((tick>>3)&1) ? PLAYER_WALK_A : PLAYER_WALK_B;
+  } else {
+    frame = PLAYER_ROWS;
+  }
 
   // Faint shadow on ground
   oc.fillStyle='rgba(0,0,0,0.22)';
@@ -3208,50 +3519,70 @@ function drawEnemy_spider(x,y){  // ── SHADOW WITCH ──
 }
 
 function drawEnemy_skeleton(x,y,dir){
-  const sb='#D0D8E0',sh=shadeC(sb,20),sd=shadeC(sb,-25),re='#F81000';
-  // Legs (with bones)
-  rect(x+4,y+18,3,7,sd); rect(x+4,y+18,1,7,sh);
-  rect(x+9,y+18,3,7,sd); rect(x+9,y+18,1,7,sh);
-  // Knee joints
-  rect(x+4,y+21,3,2,sb); rect(x+9,y+21,3,2,sb);
-  // Feet
-  rect(x+3,y+24,5,2,sd); rect(x+8,y+24,5,2,sd);
-  rect(x+3,y+24,5,1,sb); rect(x+8,y+24,5,1,sb);
-  // Pelvis
+  const sb='#C8D4E0',sh='#E8F0F8',sd='#8090A0',re='#FF1000',crack='#505868';
+  const anim=((tick>>4)&1);  // slow bone clatter animation
+  // ── Legs — animating walk ──
+  const lOff=anim?1:0;
+  rect(x+4,y+18-lOff,3,8+lOff,sd); rect(x+4,y+18-lOff,1,8+lOff,sh); // left femur
+  rect(x+9,y+18+lOff,3,8-lOff,sd); rect(x+9,y+18+lOff,1,8-lOff,sh); // right femur
+  rect(x+4,y+22,3,2,sb);            rect(x+9,y+22,3,2,sb);           // knees
+  rect(x+3,y+25,4,2,sd);            rect(x+8,y+24,5,2,sd);           // feet
+  rect(x+3,y+25,4,1,sb);            rect(x+8,y+24,5,1,sb);
+  // ── Pelvis ──
   rect(x+3,y+16,10,4,sb); rect(x+3,y+16,10,1,sh);
-  // Ribcage
-  rect(x+4,y+8,8,9,sd);
-  for(let ri=0;ri<3;ri++){
-    rect(x+3,y+9+ri*3,10,2,sb);
-    rect(x+3,y+9+ri*3,10,1,sh);
-    rect(x+4,y+10+ri*3,8,1,'#808898');
+  rect(x+5,y+17,6,2,sd); // hip socket shadows
+  // ── Ribcage with individual ribs ──
+  rect(x+5,y+8,6,9,sd); // dark cavity
+  for(let ri=0;ri<4;ri++){
+    rect(x+3,y+8+ri*2,10,1,sb);
+    rect(x+3,y+8+ri*2,10,1,sh);
+    rect(x+4,y+9+ri*2,8,1,sd);
   }
-  // Spine
-  rect(x+7,y+8,2,8,sb); rect(x+7,y+8,1,8,sh);
-  // Arms
-  rect(x+1,y+9,3,8,sb); rect(x+1,y+9,1,8,sh);
-  rect(x+12,y+9,3,8,sb); rect(x+12,y+9,1,8,sh);
-  // Elbow joints
-  rect(x+1,y+13,3,2,sd); rect(x+12,y+13,3,2,sd);
-  // Skull
-  rect(x+4,y+1,8,8,sb); rect(x+4,y+1,1,8,sh);
-  rect(x+5,y+0,6,2,sb); // dome
-  // Cheekbones / jaw
-  rect(x+3,y+6,10,4,sh);
-  rect(x+4,y+8,8,3,sd); // jaw shadow
-  // Eye sockets
-  rect(x+5,y+3,3,3,'#1020A0'); rect(x+8,y+3,3,3,'#1020A0');
-  rect(x+5,y+3,3,1,re); rect(x+8,y+3,3,1,re);
-  rect(x+6,y+4,1,1,'#F80000'); rect(x+9,y+4,1,1,'#F80000');
+  rect(x+7,y+8,2,8,sh); // spine highlight
+  // ── Cracked shoulder blades ──
+  rect(x+2,y+8,3,3,sb); rect(x+2,y+8,1,3,sh);
+  rect(x+11,y+8,3,3,sb); rect(x+11,y+8,1,3,sh);
+  // ── Arms — articulated ──
+  const aArm=anim?-1:1;
+  rect(x+1,y+9,2,9,sd); rect(x+1,y+9,1,9,sh); // left upper
+  rect(x+1,y+13,3,2,sb);                          // left elbow
+  rect(x+1,y+15,2,5,sd); rect(x+1,y+15,1,5,sh); // left lower
+  rect(x+13,y+9,2,9,sd); rect(x+13,y+9,1,9,sh); // right upper
+  rect(x+12,y+13,3,2,sb);                          // right elbow
+  rect(x+13,y+15,2,5,sd); rect(x+13,y+15,1,5,sh);// right lower
+  // ── Skull — larger, more menacing ──
+  // Brain case dome
+  rect(x+4,y+0,8,2,sh);
+  rect(x+3,y+2,10,7,sb); rect(x+3,y+2,1,7,sh); rect(x+12,y+2,1,7,sd);
+  rect(x+3,y+2,10,1,sh); // top highlight
+  // Cheekbones
+  rect(x+2,y+6,12,3,shadeC(sb,10));
+  rect(x+2,y+6,1,3,sh);
+  // Jaw
+  rect(x+3,y+9,10,3,sd); rect(x+3,y+9,10,1,sb);
+  // Teeth — uneven and menacing
+  [[5,1],[7,2],[9,1],[11,2]].forEach(([tx,th])=>{ rect(x+tx,y+10,1,th,sh); });
+  // Eye sockets — glowing red
+  rect(x+4,y+3,4,4,'#100820'); rect(x+8,y+3,4,4,'#100820');
+  const glow=0.6+0.4*Math.abs(Math.sin(tick*0.09));
+  oc.globalAlpha=glow;
+  rect(x+5,y+4,2,2,re); rect(x+9,y+4,2,2,re);
+  rect(x+5,y+4,1,1,'#FF8000'); rect(x+9,y+4,1,1,'#FF8000'); // inner orange
+  oc.globalAlpha=1;
   // Nose cavity
-  rect(x+7,y+6,2,2,'#202030');
-  // Teeth
-  for(let ti=0;ti<4;ti++) rect(x+5+ti*2,y+9,1,2,sh);
-  // Sword
+  rect(x+7,y+7,2,2,'#181820');
+  // Skull cracks for battle-worn look
+  rect(x+4,y+2,1,4,crack); rect(x+10,y+3,1,3,crack);
+  // ── Sword (animated raise/lower) ──
+  const swy=anim?1:0;
   const sdir=dir>0?1:-1;
-  rect(x+(dir>0?13:0),y+12,sdir>0?14:-14|0,2,shadeC(sb,-5));
-  rect(x+(dir>0?12:2),y+10,3,6,'#C8A020'); // guard
-  rect(x+(dir>0?12:3),y+10,3,1,'#F0D040');
+  const sx=dir>0?x+13:x-2;
+  rect(sx,y+11+swy,dir>0?15:-15|0,2,'#A0B0C0'); // blade
+  rect(sx,y+11+swy,dir>0?15:-15|0,1,sh);          // blade highlight
+  rect(x+(dir>0?11:2),y+9+swy,4,6,'#C8A020');     // crossguard
+  rect(x+(dir>0?11:2),y+9+swy,4,1,'#F0D040');
+  rect(x+(dir>0?12:3),y+7+swy,2,4,'#8B5E10');     // grip
+  rect(x+(dir>0?12:3),y+6+swy,2,2,'#D4A820');     // pommel
 }
 
 // ─── SCREEN DRAW ─────────────────────────────────────────────────────────────
@@ -3267,30 +3598,44 @@ function drawScreen(){
   drawExitIndicators(sc);
 }
 
+// Piskel-style 7×7 pixel art coin (drawn with spr)
+const COIN_PAL={
+  R:'#A07010', // rim dark
+  D:'#C89020', // body dark
+  M:'#E0B030', // body mid
+  L:'#F8D050', // body light
+  H:'#FFEC90', // highlight
+  s:'#80580A', // deep shadow
+  '.':null
+};
+const COIN_ROWS=[
+  '.RRRRRR.',  // 0
+  'RDDMMDDr',  // 1
+  'RDLLLDDr',  // 2
+  'RDHLMMDr',  // 3
+  'RDDLLDDr',  // 4
+  'RDDDDDsr',  // 5
+  '.RRRRRs.',  // 6
+];
+// add lowercase 'r' = right edge shadow
+COIN_PAL.r='#906010';
+
 function drawCoins(sc){
   if(!sc.coins) return;
   sc.coins.forEach(coin=>{
     if(collectedCoins.has(coin.id)) return;
-    const cx=~~(coin.x*rTS)+8, cy=~~(coin.y*rTS)+10;
-    const bob=~~(Math.sin(tick*0.1+coin.x)*2);
+    const cx=~~(coin.x*rTS)+5, cy=~~(coin.y*rTS)+8;
+    const bob=~~(Math.sin(tick*0.12+coin.x)*2);
     const cy2=cy+bob;
-    // Shadow
-    oc.globalAlpha=0.3; oc.fillStyle='#000';
-    oc.beginPath(); oc.ellipse(cx,cy+3,2,1,0,0,Math.PI*2); oc.fill();
+    // Drop shadow
+    oc.globalAlpha=0.28; oc.fillStyle='#000';
+    oc.fillRect(cx+1,cy2+8,6,2);
     oc.globalAlpha=1;
-    // Coin body
-    oc.fillStyle='#D4A820';
-    oc.beginPath(); oc.ellipse(cx,cy2,2.5,2.5,0,0,Math.PI*2); oc.fill();
-    oc.fillStyle='#FFD860';
-    oc.beginPath(); oc.ellipse(cx,cy2,2,2,0,0,Math.PI*2); oc.fill();
-    // Shine
-    oc.fillStyle='#FFEC90';
-    oc.fillRect(cx-1,cy2-2,1,1);
-    // Rim
-    oc.strokeStyle='#A07810'; oc.lineWidth=0.5;
-    oc.beginPath(); oc.ellipse(cx,cy2,2.5,2.5,0,0,Math.PI*2); oc.stroke();
-    if(false){
-    }
+    // Pixel-art coin body via spr()
+    spr(cx,cy2,COIN_ROWS,COIN_PAL);
+    // Animated sparkle on rim
+    if((tick>>3)%4===0){rect(cx+6,cy2+1,1,1,'#FFFFFF');}
+    else if((tick>>3)%4===2){rect(cx,cy2+5,1,1,'#FFFFFF');}
   });
 }
 
@@ -3815,6 +4160,7 @@ function drawTitle() {
 // ─── GAME LOOP ────────────────────────────────────────────────────────────────
 let lastTime = 0;
 function loop(ts) {
+  if (!gameReady) { requestAnimationFrame(loop); return; }
   const dt = Math.min(ts - lastTime, 50);
   lastTime = ts;
   tick++;
@@ -3833,6 +4179,7 @@ function loop(ts) {
   if (gameState === 'playing' && !settingsOpen) {
     updatePlayer(dt);
     updateEnemies(dt);
+    updateCoinParticles();
   }
 
   // Draw everything to low-res offscreen canvas
@@ -3845,6 +4192,7 @@ function loop(ts) {
   } else {
     drawScreen();
     drawEnemies();
+    drawCoinParticles();
     drawPlayer();
     if (gameState === 'inventory') drawInventory();
     else if (gameState === 'dialogue') drawDialogue();
@@ -3871,6 +4219,29 @@ function loop(ts) {
   ctx.drawImage(osc, 0, 0, 320, 224, dx, dy, dw, dh);
 
   requestAnimationFrame(loop);
+}
+
+// ─── NAME ENTRY ───────────────────────────────────────────────────────────────
+let playerName = 'Hero';
+let gameReady = false;
+
+(function(){
+  const inp = document.getElementById('name-input');
+  const btn = document.getElementById('name-start-btn');
+  inp.addEventListener('input', () => {
+    btn.disabled = inp.value.trim().length === 0;
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && inp.value.trim().length > 0) startGame();
+  });
+})();
+
+function startGame(){
+  const inp = document.getElementById('name-input');
+  playerName = inp.value.trim() || 'Hero';
+  document.getElementById('name-screen').style.display = 'none';
+  gameReady = true;
+  setTimeout(startMusic, 5000);
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
